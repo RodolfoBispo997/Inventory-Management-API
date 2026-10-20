@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\StockMovement;
+use App\Notifications\StockMinimumReachedNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
 class StockMovementService
@@ -21,12 +23,33 @@ class StockMovementService
                 ]);
             }
 
+            $previousStock = $lockedProduct->current_stock;
             $lockedProduct->current_stock += $data['type'] === 'IN'
                 ? $data['quantity']
                 : -$data['quantity'];
             $lockedProduct->save();
 
-            return $lockedProduct->movements()->create($data);
+            $movement = $lockedProduct->movements()->create($data);
+
+            $alertRecipient = config('services.stock_alert.email');
+            $crossedMinimumStock = $data['type'] === 'OUT'
+                && $previousStock > $lockedProduct->minimum_stock
+                && $lockedProduct->current_stock <= $lockedProduct->minimum_stock;
+
+            if ($crossedMinimumStock && is_string($alertRecipient) && $alertRecipient !== '') {
+                $notification = new StockMinimumReachedNotification(
+                    productName: $lockedProduct->name,
+                    sku: $lockedProduct->sku,
+                    currentStock: $lockedProduct->current_stock,
+                    minimumStock: $lockedProduct->minimum_stock,
+                );
+
+                DB::afterCommit(function () use ($alertRecipient, $notification): void {
+                    Notification::route('mail', $alertRecipient)->notify($notification);
+                });
+            }
+
+            return $movement;
         });
     }
 }

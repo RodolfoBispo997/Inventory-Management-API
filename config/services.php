@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'stock_alert' => [
+        'email' => env('LOW_STOCK_ALERT_EMAIL'),
+    ],
+
 ];

@@ -18,11 +18,12 @@ services:
       DB_USERNAME: inventory
       DB_PASSWORD: inventory
       CACHE_STORE: redis
-      QUEUE_CONNECTION: database
+      QUEUE_CONNECTION: redis
       REDIS_CLIENT: phpredis
       REDIS_HOST: redis
       REDIS_PASSWORD: "null"
       REDIS_PORT: "6379"
+      LOW_STOCK_ALERT_EMAIL: "${LOW_STOCK_ALERT_EMAIL:-}"
       MAIL_MAILER: smtp
       MAIL_HOST: mailpit
       MAIL_PORT: "1025"
@@ -43,12 +44,54 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_healthy
+      worker:
+        condition: service_started
     healthcheck:
       test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8000) ? 0 : 1);"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 20s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    working_dir: /var/www/html
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: inventory
+      DB_USERNAME: inventory
+      DB_PASSWORD: inventory
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PASSWORD: "null"
+      REDIS_PORT: "6379"
+      LOW_STOCK_ALERT_EMAIL: "${LOW_STOCK_ALERT_EMAIL:-}"
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      MAIL_FROM_ADDRESS: "hello@example.test"
+      MAIL_FROM_NAME: "${APP_NAME:-Inventory Management API}"
+    command: php artisan queue:work redis --sleep=3 --tries=3 --timeout=90
+    volumes:
+      - .:/var/www/html
+      - vendor:/var/www/html/vendor
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
 
   mysql:
     image: mysql:8.4

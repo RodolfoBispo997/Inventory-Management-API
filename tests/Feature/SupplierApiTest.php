@@ -28,6 +28,20 @@ class SupplierApiTest extends TestCase
         ]);
     }
 
+    public function test_creates_supplier_with_unformatted_cnpj(): void
+    {
+        $this->postJson('/api/suppliers', [
+            'name' => 'Northwind Supplies',
+            'cnpj' => '98765432000110',
+        ])->assertCreated()
+            ->assertJsonPath('data.cnpj', '98765432000110');
+
+        $this->assertDatabaseHas('suppliers', [
+            'name' => 'Northwind Supplies',
+            'cnpj' => '98765432000110',
+        ]);
+    }
+
     public function test_lists_and_shows_suppliers(): void
     {
         $supplier = Supplier::factory()->create(['name' => 'Northwind']);

@@ -22,6 +22,8 @@ No PowerShell, copie o arquivo de ambiente de exemplo somente se ainda não houv
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
+Defina `LOW_STOCK_ALERT_EMAIL` no `.env` para receber os alertas de estoque mínimo. O endereço é independente dos fornecedores; sem destinatário configurado, os alertas ficam desativados. O Compose usa Redis para a fila e inicia um worker dedicado. Os e-mails locais aparecem no Mailpit em `http://localhost:8025`.
+
 No Bash, use `cp -n .env.example .env`. Depois construa a imagem, gere a chave local, inicie os serviços e execute as migrations:
 
 ```sh
