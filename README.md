@@ -1,58 +1,179 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Inventory Management API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+API REST para cadastro de produtos, fornecedores, comparação de preços e controle de estoque por movimentações.
 
-## About Laravel
+## Requisitos e execução
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.4+
+- Composer
+- Node.js e npm para compilar os assets padrão do Laravel
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Instale e prepare a aplicação com `composer run setup`. Inicie o ambiente local com `composer run dev` e rode os testes com `php artisan test --compact`.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+As respostas usam JSON. Listagens são paginadas com 15 registros por página e aceitam `?page=2`.
 
-## Learning Laravel
+## Produtos e estoque
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Criar produto — `POST /api/products`
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+O saldo inicia em zero e não pode ser enviado no cadastro.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```json
+{
+  "name": "Teclado mecânico",
+  "sku": "TEC-001",
+  "minimum_stock": 5
+}
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Resposta `201 Created` (campos principais):
 
-## Contributing
+```json
+{
+  "data": {
+    "id": 1,
+    "name": "Teclado mecânico",
+    "sku": "TEC-001",
+    "minimum_stock": 5,
+    "current_stock": 0
+  }
+}
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Listar e consultar produtos
 
-## Code of Conduct
+- `GET /api/products`
+- `GET /api/products/{product}`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Registrar movimentação — `POST /api/products/{product}/movements`
 
-## Security Vulnerabilities
+`type` aceita `IN` ou `OUT`; `quantity` deve ser inteiro positivo; `reason` é opcional.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```json
+{
+  "type": "IN",
+  "quantity": 20,
+  "reason": "Compra da semana"
+}
+```
 
-## License
+Resposta `201 Created` inclui a movimentação em `data`. Uma saída maior que o saldo disponível retorna `422` sem gravar a movimentação ou alterar o produto.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Histórico de movimentações
+
+`GET /api/products/{product}/movements` retorna histórico paginado, do mais recente para o mais antigo.
+
+## Fornecedores
+
+### Criar fornecedor — `POST /api/suppliers`
+
+`name` e CNPJ são obrigatórios. O CNPJ pode ser enviado com ou sem pontuação e é armazenado como 14 dígitos. Email e telefone são opcionais.
+
+```json
+{
+  "name": "Acme Distribuidora",
+  "cnpj": "12.345.678/0001-90",
+  "email": "vendas@acme.example",
+  "phone": "+55 11 4000-1234"
+}
+```
+
+Resposta `201 Created`:
+
+```json
+{
+  "data": {
+    "id": 1,
+    "name": "Acme Distribuidora",
+    "cnpj": "12345678000190",
+    "email": "vendas@acme.example",
+    "phone": "+55 11 4000-1234"
+  }
+}
+```
+
+### Listar e consultar fornecedores
+
+- `GET /api/suppliers`
+- `GET /api/suppliers/{supplier}`
+
+## Preços por fornecedor
+
+### Cadastrar ou atualizar preço
+
+`PUT /api/products/{product}/suppliers/{supplier}` cria ou atualiza a associação do produto com o fornecedor. Repetir a chamada não duplica a associação.
+
+```json
+{
+  "price": "129.90",
+  "supplier_product_code": "ACM-TEC-9"
+}
+```
+
+`price` deve ser numérico, não negativo e conter no máximo duas casas decimais. `supplier_product_code` é opcional.
+
+Resposta `200 OK`:
+
+```json
+{
+  "data": {
+    "supplier": {
+      "id": 1,
+      "name": "Acme Distribuidora",
+      "cnpj": "12345678000190"
+    },
+    "price": "129.90",
+    "supplier_product_code": "ACM-TEC-9"
+  }
+}
+```
+
+### Comparar preços
+
+`GET /api/products/{product}/suppliers` retorna fornecedores e preços cadastrados em ordem crescente de preço, com metadados e links de paginação.
+
+Exemplo de resposta `200 OK`:
+
+```json
+{
+  "data": [
+    {
+      "supplier": {
+        "id": 2,
+        "name": "Distribuidora Central",
+        "cnpj": "98765432000110"
+      },
+      "price": "125.00",
+      "supplier_product_code": null
+    },
+    {
+      "supplier": {
+        "id": 1,
+        "name": "Acme Distribuidora",
+        "cnpj": "12345678000190"
+      },
+      "price": "129.90",
+      "supplier_product_code": "ACM-TEC-9"
+    }
+  ],
+  "links": {
+    "first": "https://example.test/api/products/1/suppliers?page=1",
+    "last": "https://example.test/api/products/1/suppliers?page=1",
+    "prev": null,
+    "next": null
+  },
+  "meta": {
+    "current_page": 1,
+    "from": 1,
+    "last_page": 1,
+    "path": "https://example.test/api/products/1/suppliers",
+    "per_page": 15,
+    "to": 2,
+    "total": 2
+  }
+}
+```
+
+## Validação e erros
+
+Erros de validação retornam `422` em JSON com os detalhes em `errors`. Produtos ou fornecedores inexistentes retornam `404`.

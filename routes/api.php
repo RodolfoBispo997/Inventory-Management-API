@@ -1,10 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductSupplierController;
 use App\Http\Controllers\Api\StockMovementController;
+use App\Http\Controllers\Api\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('products', ProductController::class)->only(['index', 'store', 'show']);
 
 Route::get('products/{product}/movements', [StockMovementController::class, 'index']);
 Route::post('products/{product}/movements', [StockMovementController::class, 'store']);
+
+Route::apiResource('suppliers', SupplierController::class)->only(['index', 'store', 'show']);
+Route::get('products/{product}/suppliers', [ProductSupplierController::class, 'index']);
+Route::put('products/{product}/suppliers/{supplier}', [ProductSupplierController::class, 'update']);
