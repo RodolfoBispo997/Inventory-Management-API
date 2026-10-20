@@ -12,6 +12,35 @@ Instale e prepare a aplicação com `composer run setup`. Inicie o ambiente loca
 
 As respostas usam JSON. Listagens são paginadas com 15 registros por página e aceitam `?page=2`.
 
+## Ambiente local com Docker
+
+O Compose inicia a aplicação PHP, MySQL 8.4, Redis 7 e Mailpit. As portas publicadas ficam em `localhost`: API `8000`, MySQL `3307`, Redis `6380`, SMTP `1025` e interface do Mailpit `8025`. O MySQL e Redis usam volumes nomeados para manter seus dados entre reinícios. As credenciais do Compose são apenas valores locais de exemplo; não as reutilize fora do desenvolvimento.
+
+No PowerShell, copie o arquivo de ambiente de exemplo somente se ainda não houver um `.env` local:
+
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+No Bash, use `cp -n .env.example .env`. Depois construa a imagem, gere a chave local, inicie os serviços e execute as migrations:
+
+```sh
+docker compose build
+docker compose run --rm app php artisan key:generate --force
+docker compose up -d --wait
+docker compose exec app php artisan migrate --force
+```
+
+A API ficará em `http://localhost:8000` e o Mailpit em `http://localhost:8025`. Para acompanhar os logs use `docker compose logs -f`; para parar os containers sem apagar os dados use `docker compose down`.
+
+Para executar testes dentro do container usando SQLite em memória (como no PHPUnit), rode `docker compose exec -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: app php artisan test --compact`. Para formatar PHP no container, rode `docker compose exec app vendor/bin/pint --format agent`.
+
+O setup atual do Laragon continua disponível por `composer run setup`, `composer run dev` e `php artisan test --compact` sem Docker.
+
+## Integração contínua
+
+O workflow `.github/workflows/ci.yml` executa automaticamente em `push` e `pull_request`: instala as dependências Composer com PHP 8.4, prepara a chave para o ambiente e roda `php artisan test --compact` e Pint. Os testes do CI mantêm o SQLite em memória configurado no PHPUnit.
+
 ## Produtos e estoque
 
 ### Criar produto — `POST /api/products`
