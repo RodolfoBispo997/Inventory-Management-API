@@ -4,16 +4,25 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\Product;
+use App\Models\User;
 use App\Notifications\StockMinimumReachedNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class StockMinimumAlertTest extends TestCase
 {
     use DatabaseMigrations;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Sanctum::actingAs(User::factory()->create());
+    }
 
     public function test_queues_notification_when_exit_crosses_minimum_stock(): void
     {

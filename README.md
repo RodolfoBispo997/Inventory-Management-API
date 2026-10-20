@@ -12,6 +12,57 @@ Instale e prepare a aplicação com `composer run setup`. Inicie o ambiente loca
 
 As respostas usam JSON. Listagens são paginadas com 15 registros por página e aceitam `?page=2`.
 
+## Autenticação
+
+O cadastro e o login emitem tokens pessoais do Laravel Sanctum. Envie o token no cabeçalho `Authorization: Bearer <token>` para acessar qualquer endpoint de negócio. O token é mostrado somente na resposta de cadastro/login; o hash armazenado não é retornado. O logout revoga apenas o token usado naquela requisição. Login é limitado a 5 tentativas por minuto por combinação de e-mail e IP (e 20 por minuto por IP); cadastro é limitado a 10 por minuto por IP.
+
+### Cadastrar usuário — `POST /api/auth/register`
+
+```json
+{
+  "name": "Rafaela Souza",
+  "email": "rafaela@example.test",
+  "password": "a-secure-password"
+}
+```
+
+Resposta `201 Created`:
+
+```json
+{
+  "data": {
+    "user": { "id": 1, "name": "Rafaela Souza", "email": "rafaela@example.test" },
+    "token": "1|token-em-texto-plano"
+  }
+}
+```
+
+### Login — `POST /api/auth/login`
+
+```json
+{
+  "email": "rafaela@example.test",
+  "password": "a-secure-password"
+}
+```
+
+Resposta `200 OK` tem a mesma estrutura `data.user` e `data.token` do cadastro. Credenciais inválidas retornam `401` sem revelar se o e-mail existe.
+
+### Usuário atual e logout
+
+- `GET /api/auth/me` retorna o usuário autenticado, sem senha ou hash.
+- `POST /api/auth/logout` revoga o token atual.
+
+Inclua o token nas rotas protegidas:
+
+```sh
+curl http://localhost:8000/api/products \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer 1|token-em-texto-plano"
+```
+
+Todas as rotas de produtos, movimentações, setores, fornecedores, preços e relatórios exigem autenticação. Usuários compartilham o mesmo estoque nesta versão.
+
 ## Ambiente local com Docker
 
 O Compose inicia a aplicação PHP, MySQL 8.4, Redis 7 e Mailpit. As portas publicadas ficam em `localhost`: API `8000`, MySQL `3307`, Redis `6380`, SMTP `1025` e interface do Mailpit `8025`. O MySQL e Redis usam volumes nomeados para manter seus dados entre reinícios. As credenciais do Compose são apenas valores locais de exemplo; não as reutilize fora do desenvolvimento.
