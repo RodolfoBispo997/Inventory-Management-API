@@ -17,6 +17,8 @@ class StockMovementResource extends JsonResource
         return [
             'id' => $this->id,
             'product_id' => $this->product_id,
+            'department_id' => $this->department_id,
+            'department' => DepartmentResource::make($this->whenLoaded('department')),
             'type' => $this->type,
             'quantity' => $this->quantity,
             'reason' => $this->reason,

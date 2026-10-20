@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Department;
 use App\Models\Product;
 use App\Notifications\StockMinimumReachedNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -20,10 +21,12 @@ class StockMinimumAlertTest extends TestCase
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
         $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->create();
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'OUT',
             'quantity' => 3,
+            'department_id' => $department->id,
         ])->assertCreated();
 
         Queue::assertPushed(SendQueuedNotifications::class, function (SendQueuedNotifications $job): bool {
@@ -45,9 +48,10 @@ class StockMinimumAlertTest extends TestCase
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
         $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->create();
 
-        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 4])->assertCreated();
-        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 1])->assertCreated();
+        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 4, 'department_id' => $department->id])->assertCreated();
+        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 1, 'department_id' => $department->id])->assertCreated();
 
         Queue::assertPushed(SendQueuedNotifications::class, 1);
         $this->assertDatabaseHas('products', ['id' => $product->id, 'current_stock' => 3]);
@@ -60,10 +64,11 @@ class StockMinimumAlertTest extends TestCase
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
         $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->create();
 
-        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 4])->assertCreated();
+        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 4, 'department_id' => $department->id])->assertCreated();
         $this->postJson("/api/products/{$product->id}/movements", ['type' => 'IN', 'quantity' => 3])->assertCreated();
-        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 2])->assertCreated();
+        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 2, 'department_id' => $department->id])->assertCreated();
 
         Queue::assertPushed(SendQueuedNotifications::class, 2);
         $this->assertDatabaseHas('products', ['id' => $product->id, 'current_stock' => 5]);
@@ -76,8 +81,9 @@ class StockMinimumAlertTest extends TestCase
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
         $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 6]);
+        $department = Department::factory()->create();
 
-        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 7])
+        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 7, 'department_id' => $department->id])
             ->assertUnprocessable();
 
         Queue::assertNothingPushed();
@@ -91,8 +97,9 @@ class StockMinimumAlertTest extends TestCase
         config()->set('services.stock_alert.email', null);
 
         $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->create();
 
-        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 3])->assertCreated();
+        $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 3, 'department_id' => $department->id])->assertCreated();
 
         Queue::assertNothingPushed();
         $this->assertDatabaseHas('products', ['id' => $product->id, 'current_stock' => 5]);

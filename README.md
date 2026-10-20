@@ -78,7 +78,7 @@ Resposta `201 Created` (campos principais):
 
 ### Registrar movimentação — `POST /api/products/{product}/movements`
 
-`type` aceita `IN` ou `OUT`; `quantity` deve ser inteiro positivo; `reason` é opcional.
+`type` aceita `IN` ou `OUT`; `quantity` deve ser inteiro positivo; `reason` é opcional. Saídas exigem `department_id` de um setor existente. Entradas não aceitam esse campo.
 
 ```json
 {
@@ -90,9 +90,73 @@ Resposta `201 Created` (campos principais):
 
 Resposta `201 Created` inclui a movimentação em `data`. Uma saída maior que o saldo disponível retorna `422` sem gravar a movimentação ou alterar o produto.
 
+Exemplo de saída para um setor:
+
+```json
+{
+  "type": "OUT",
+  "quantity": 2,
+  "reason": "Uso na manutenção",
+  "department_id": 1
+}
+```
+
+O histórico inclui `department_id` e o objeto `department` (`id`, `name` e `code`) para saídas classificadas; entradas retornam esses campos como `null`.
+
 ### Histórico de movimentações
 
 `GET /api/products/{product}/movements` retorna histórico paginado, do mais recente para o mais antigo.
+
+## Setores
+
+Os setores são cadastrados com `name` obrigatório (máximo de 100 caracteres) e `code` obrigatório e único (máximo de 32 caracteres).
+
+- `POST /api/departments` cria um setor.
+- `GET /api/departments` lista setores em ordem por nome, com paginação.
+- `GET /api/departments/{department}` consulta um setor.
+
+Payload de criação:
+
+```json
+{
+  "name": "Manutenção",
+  "code": "MAINT"
+}
+```
+
+## Relatório de consumo por setor
+
+`GET /api/reports/consumption` exige `from` e `to` no formato `YYYY-MM-DD`; o dia final é inclusivo. `to` deve ser igual ou posterior a `from`. O parâmetro opcional `department_id` filtra um setor existente. O relatório considera somente saídas e retorna quantidades e contagens agregadas por setor e produto; ambos aparecem em ordem estável por nome e ID.
+
+Exemplo: `GET /api/reports/consumption?from=2026-04-01&to=2026-04-30&department_id=1`
+
+```json
+{
+  "data": {
+    "from": "2026-04-01",
+    "to": "2026-04-30",
+    "department_id": 1,
+    "departments": [
+      {
+        "id": 1,
+        "name": "Manutenção",
+        "code": "MAINT",
+        "consumed_quantity": 6,
+        "movement_count": 2,
+        "products": [
+          {
+            "id": 4,
+            "name": "Teclado mecânico",
+            "sku": "TEC-001",
+            "consumed_quantity": 6,
+            "movement_count": 2
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
 ## Fornecedores
 

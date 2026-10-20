@@ -15,7 +15,7 @@ class StockMovementController extends Controller
     public function index(Product $product): AnonymousResourceCollection
     {
         return StockMovementResource::collection(
-            $product->movements()->orderByDesc('id')->paginate(15)
+            $product->movements()->with('department')->orderByDesc('id')->paginate(15)
         );
     }
 
@@ -25,6 +25,7 @@ class StockMovementController extends Controller
         StockMovementService $service,
     ): JsonResponse {
         $movement = $service->record($product, $request->validated());
+        $movement->load('department');
 
         return (new StockMovementResource($movement))->response()->setStatusCode(201);
     }

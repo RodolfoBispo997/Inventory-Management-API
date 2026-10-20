@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Department;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -80,36 +81,85 @@ class ProductApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.type', 'IN')
             ->assertJsonPath('data.0.quantity', 10)
+            ->assertJsonPath('data.0.department_id', null)
+            ->assertJsonPath('data.0.department', null)
             ->assertJsonStructure(['data', 'links', 'meta']);
     }
 
     public function test_records_valid_stock_exit_and_updates_product_balance(): void
     {
         $product = Product::factory()->create(['current_stock' => 8]);
+        $department = Department::factory()->create();
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'OUT',
             'quantity' => 3,
-        ])->assertCreated()->assertJsonPath('data.type', 'OUT');
+            'department_id' => $department->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.type', 'OUT')
+            ->assertJsonPath('data.department_id', $department->id)
+            ->assertJsonPath('data.department.code', $department->code);
 
         $this->assertDatabaseHas('products', ['id' => $product->id, 'current_stock' => 5]);
         $this->assertDatabaseHas('stock_movements', [
             'product_id' => $product->id,
             'type' => 'OUT',
             'quantity' => 3,
+            'department_id' => $department->id,
         ]);
+
+        $this->getJson("/api/products/{$product->id}/movements")
+            ->assertOk()
+            ->assertJsonPath('data.0.department.id', $department->id)
+            ->assertJsonPath('data.0.department.name', $department->name);
     }
 
     public function test_rejects_stock_exit_above_balance_without_changes(): void
     {
         $product = Product::factory()->create(['current_stock' => 2]);
+        $department = Department::factory()->create();
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'OUT',
             'quantity' => 3,
+            'department_id' => $department->id,
         ])->assertUnprocessable()->assertJsonValidationErrors('quantity');
 
         $this->assertDatabaseHas('products', ['id' => $product->id, 'current_stock' => 2]);
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    public function test_requires_an_existing_department_for_stock_exit(): void
+    {
+        $product = Product::factory()->create(['current_stock' => 8]);
+
+        $this->postJson("/api/products/{$product->id}/movements", [
+            'type' => 'OUT',
+            'quantity' => 1,
+        ])->assertUnprocessable()->assertJsonValidationErrors('department_id');
+
+        $this->postJson("/api/products/{$product->id}/movements", [
+            'type' => 'OUT',
+            'quantity' => 1,
+            'department_id' => 999999,
+        ])->assertUnprocessable()->assertJsonValidationErrors('department_id');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'current_stock' => 8]);
+        $this->assertDatabaseCount('stock_movements', 0);
+    }
+
+    public function test_rejects_department_for_stock_entry(): void
+    {
+        $product = Product::factory()->create();
+        $department = Department::factory()->create();
+
+        $this->postJson("/api/products/{$product->id}/movements", [
+            'type' => 'IN',
+            'quantity' => 3,
+            'department_id' => $department->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('department_id');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'current_stock' => 0]);
         $this->assertDatabaseCount('stock_movements', 0);
     }
 
@@ -117,7 +167,9 @@ class ProductApiTest extends TestCase
     {
         $product = Product::factory()->create();
 
-        foreach ([['type' => 'TRANSFER', 'quantity' => 1], ['type' => 'IN', 'quantity' => 0], ['type' => 'OUT', 'quantity' => -1]] as $payload) {
+        $department = Department::factory()->create();
+
+        foreach ([['type' => 'TRANSFER', 'quantity' => 1], ['type' => 'IN', 'quantity' => 0], ['type' => 'OUT', 'quantity' => -1, 'department_id' => $department->id]] as $payload) {
             $this->postJson("/api/products/{$product->id}/movements", $payload)
                 ->assertUnprocessable();
         }

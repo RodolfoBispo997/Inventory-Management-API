@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\ConsumptionReportController;
+use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductSupplierController;
 use App\Http\Controllers\Api\StockMovementController;
@@ -14,3 +16,6 @@ Route::post('products/{product}/movements', [StockMovementController::class, 'st
 Route::apiResource('suppliers', SupplierController::class)->only(['index', 'store', 'show']);
 Route::get('products/{product}/suppliers', [ProductSupplierController::class, 'index']);
 Route::put('products/{product}/suppliers/{supplier}', [ProductSupplierController::class, 'update']);
+
+Route::apiResource('departments', DepartmentController::class)->only(['index', 'store', 'show']);
+Route::get('reports/consumption', ConsumptionReportController::class);
