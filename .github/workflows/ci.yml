@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   tests:
-    name: Tests and Pint
+    name: Tests (SQLite) and Pint
     runs-on: ubuntu-latest
 
     steps:
@@ -38,3 +38,67 @@ jobs:
         run: |
           vendor/bin/pint --format agent
           git diff --exit-code -- '*.php'
+
+  mysql:
+    name: Tests (MySQL 8.4)
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: inventory_test
+      DB_USERNAME: inventory
+      DB_PASSWORD: inventory
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: inventory_test
+          MYSQL_USER: inventory
+          MYSQL_PASSWORD: inventory
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=inventory --password=inventory --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare application environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Run MySQL migrations
+        run: php artisan migrate --force --no-interaction
+
+      - name: Run tests with MySQL
+        run: php artisan test --compact
+
+  docker-build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build application image
+        run: docker build --tag inventory-management-api:ci .

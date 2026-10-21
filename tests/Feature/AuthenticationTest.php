@@ -68,6 +68,37 @@ class AuthenticationTest extends TestCase
         ])->assertUnauthorized()->assertJson(['message' => 'Credenciais inválidas.']);
     }
 
+    public function test_throttles_login_after_five_attempts_per_email_and_ip(): void
+    {
+        $credentials = [
+            'email' => 'limited@example.test',
+            'password' => 'wrong-password',
+        ];
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/auth/login', $credentials)->assertUnauthorized();
+        }
+
+        $this->postJson('/api/auth/login', $credentials)->assertTooManyRequests();
+    }
+
+    public function test_throttles_registration_after_ten_attempts_per_ip(): void
+    {
+        $registration = [
+            'name' => 'Limited User',
+            'email' => 'limited-registration@example.test',
+            'password' => 'a-secure-password',
+        ];
+
+        $this->postJson('/api/auth/register', $registration)->assertCreated();
+
+        for ($attempt = 1; $attempt < 10; $attempt++) {
+            $this->postJson('/api/auth/register', $registration)->assertUnprocessable();
+        }
+
+        $this->postJson('/api/auth/register', $registration)->assertTooManyRequests();
+    }
+
     public function test_authenticated_user_can_access_me_and_logout_revokes_only_current_token(): void
     {
         $user = User::factory()->create();

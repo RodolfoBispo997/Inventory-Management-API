@@ -16,6 +16,8 @@ As respostas usam JSON. Listagens são paginadas com 15 registros por página e 
 
 O cadastro e o login emitem tokens pessoais do Laravel Sanctum. Envie o token no cabeçalho `Authorization: Bearer <token>` para acessar qualquer endpoint de negócio. O token é mostrado somente na resposta de cadastro/login; o hash armazenado não é retornado. O logout revoga apenas o token usado naquela requisição. Login é limitado a 5 tentativas por minuto por combinação de e-mail e IP (e 20 por minuto por IP); cadastro é limitado a 10 por minuto por IP.
 
+Os tokens não têm expiração automática nesta versão. A configuração padrão instalada do Sanctum informa `expiration = null`, e os tokens são criados sem `expires_at`; eles permanecem válidos até serem revogados. Esta etapa mantém o comportamento atual e não invalida tokens existentes.
+
 ### Cadastrar usuário — `POST /api/auth/register`
 
 ```json
@@ -92,7 +94,7 @@ O setup atual do Laragon continua disponível por `composer run setup`, `compose
 
 ## Integração contínua
 
-O workflow `.github/workflows/ci.yml` executa automaticamente em `push` e `pull_request`: instala as dependências Composer com PHP 8.4, prepara a chave para o ambiente e roda `php artisan test --compact` e Pint. Os testes do CI mantêm o SQLite em memória configurado no PHPUnit.
+O workflow `.github/workflows/ci.yml` executa automaticamente em `push` e `pull_request`. Ele mantém os testes e Pint com SQLite, roda migrations e a suíte com MySQL 8.4 após o healthcheck do serviço e valida o build da imagem Docker.
 
 ## Produtos e estoque
 
