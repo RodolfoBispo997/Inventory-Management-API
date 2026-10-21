@@ -1,7 +1,7 @@
 FROM php:8.4-cli-bookworm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git unzip libicu-dev libonig-dev libxml2-dev libzip-dev \
+    && apt-get install -y --no-install-recommends git unzip libicu-dev libonig-dev libsqlite3-dev libxml2-dev libzip-dev \
     && docker-php-ext-install -j"$(nproc)" bcmath dom intl mbstring pdo_mysql pdo_sqlite pcntl simplexml sqlite3 xml xmlwriter zip \
     && pecl install redis \
     && docker-php-ext-enable redis \

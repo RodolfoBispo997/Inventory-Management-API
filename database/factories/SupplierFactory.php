@@ -19,7 +19,7 @@ class SupplierFactory extends Factory
     {
         return [
             'name' => fake()->company(),
-            'cnpj' => fake()->unique()->numerify('##########0001##'),
+            'cnpj' => fake()->unique()->numerify('##############'),
             'email' => fake()->companyEmail(),
             'phone' => fake()->optional()->phoneNumber(),
         ];

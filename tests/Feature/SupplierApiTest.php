@@ -19,6 +19,13 @@ class SupplierApiTest extends TestCase
         Sanctum::actingAs(User::factory()->create());
     }
 
+    public function test_supplier_factory_generates_a_fourteen_digit_cnpj(): void
+    {
+        $supplier = Supplier::factory()->create();
+
+        $this->assertMatchesRegularExpression('/^\d{14}$/', $supplier->cnpj);
+    }
+
     public function test_creates_supplier_and_normalizes_cnpj(): void
     {
         $this->postJson('/api/suppliers', [
