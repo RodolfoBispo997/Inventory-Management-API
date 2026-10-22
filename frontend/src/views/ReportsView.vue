@@ -8,7 +8,9 @@ import { allPages, queryString, request } from '../services/api'
 import type { ConsumptionReport, Department } from '../types/api'
 
 const { busy, error, setError } = useFeedback(); const departments = ref<Department[]>([]); const report = ref<ConsumptionReport | null>(null)
-const today = new Date(); const from = ref(new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)); const to = ref(today.toISOString().slice(0, 10)); const departmentId = ref('')
+const today = new Date()
+const formatLocalDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const from = ref(formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1))); const to = ref(formatLocalDate(today)); const departmentId = ref('')
 const totalConsumed = computed(() => report.value?.departments.reduce((total, department) => total + department.consumed_quantity, 0) ?? 0)
 const totalMovements = computed(() => report.value?.departments.reduce((total, department) => total + department.movement_count, 0) ?? 0)
 const productCount = computed(() => report.value?.departments.reduce((total, department) => total + department.products.length, 0) ?? 0)

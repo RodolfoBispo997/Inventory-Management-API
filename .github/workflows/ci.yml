@@ -8,6 +8,29 @@ permissions:
   contents: read
 
 jobs:
+  frontend-build:
+    name: Build frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
   tests:
     name: Tests (SQLite) and Pint
     runs-on: ubuntu-latest

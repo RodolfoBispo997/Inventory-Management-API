@@ -8,7 +8,9 @@ import { useFeedback } from '../composables/useFeedback'
 import type { ConsumptionReport, Department, Product } from '../types/api'
 
 const { busy, error, setError } = useFeedback(); const products = ref<Product[]>([]); const departments = ref<Department[]>([]); const report = ref<ConsumptionReport | null>(null)
-const today = new Date(); const from = ref(new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)); const to = ref(today.toISOString().slice(0, 10))
+const today = new Date()
+const formatLocalDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const from = ref(formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1))); const to = ref(formatLocalDate(today))
 const lowStock = computed(() => products.value.filter(product => product.current_stock <= product.minimum_stock).sort((first, second) => first.current_stock - second.current_stock))
 const totalConsumed = computed(() => report.value?.departments.reduce((total, department) => total + department.consumed_quantity, 0) ?? 0)
 const consumedItems = computed(() => report.value ? report.value.departments.flatMap(department => department.products.map(product => ({ ...product, department: department.name }))).sort((first, second) => second.consumed_quantity - first.consumed_quantity).slice(0, 6) : [])
