@@ -20,15 +20,18 @@ Route::prefix('auth')->group(function (): void {
 });
 
 Route::middleware('auth:sanctum')->group(function (): void {
-    Route::apiResource('products', ProductController::class)->only(['index', 'store', 'show']);
+    Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+    Route::post('products', [ProductController::class, 'store'])->middleware('can:manage-inventory-catalog');
 
     Route::get('products/{product}/movements', [StockMovementController::class, 'index']);
     Route::post('products/{product}/movements', [StockMovementController::class, 'store']);
 
-    Route::apiResource('suppliers', SupplierController::class)->only(['index', 'store', 'show']);
+    Route::apiResource('suppliers', SupplierController::class)->only(['index', 'show']);
+    Route::post('suppliers', [SupplierController::class, 'store'])->middleware('can:manage-inventory-catalog');
     Route::get('products/{product}/suppliers', [ProductSupplierController::class, 'index']);
     Route::put('products/{product}/suppliers/{supplier}', [ProductSupplierController::class, 'update']);
 
-    Route::apiResource('departments', DepartmentController::class)->only(['index', 'store', 'show']);
+    Route::apiResource('departments', DepartmentController::class)->only(['index', 'show']);
+    Route::post('departments', [DepartmentController::class, 'store'])->middleware('can:manage-inventory-catalog');
     Route::get('reports/consumption', ConsumptionReportController::class);
 });

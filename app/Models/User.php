@@ -16,10 +16,14 @@ use Laravel\Sanctum\HasApiTokens;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_OPERATOR = 'operator';
+
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $attributes = ['role' => 'admin'];
+    protected $attributes = ['role' => self::ROLE_ADMIN];
 
     /**
      * Get the attributes that should be cast.

@@ -8,6 +8,7 @@ use App\Http\Resources\ProductSupplierResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Gate;
 
 class ProductSupplierController extends Controller
 {
@@ -31,6 +32,7 @@ class ProductSupplierController extends Controller
         $organization = $request->user()->organization;
         $product = $organization->products()->findOrFail($product);
         $supplier = $organization->suppliers()->findOrFail($supplier);
+        Gate::authorize('manage-inventory-catalog');
 
         $product->suppliers()->syncWithoutDetaching([
             $supplier->id => [

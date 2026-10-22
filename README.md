@@ -68,6 +68,21 @@ curl http://localhost:8000/api/products \
 
 Cada usuário pertence a uma única organização. Nesta etapa, não há convites ou gestão de membros. Produtos, fornecedores, setores, movimentações, associações de preço e relatórios são isolados por organização. A API define a organização a partir do token autenticado e rejeita `organization_id` enviado pelo cliente. SKU, CNPJ e código de setor são únicos dentro da organização; o e-mail permanece globalmente único para manter o login identificado por e-mail sem ambiguidade.
 
+### Papéis e permissões
+
+O cadastro público cria o primeiro usuário da organização como `admin`. Os papéis `admin` e `operator` não podem ser definidos por payload: `role` é rejeitado no cadastro, e não há endpoints de gestão de usuários nesta etapa.
+
+| Recurso/operação | `admin` | `operator` |
+| --- | --- | --- |
+| Produtos, fornecedores e setores: consultar | Sim | Sim |
+| Produtos, fornecedores e setores: cadastrar | Sim | Não |
+| Movimentações: consultar e registrar entradas/saídas | Sim | Sim |
+| Preços de fornecedores: consultar | Sim | Sim |
+| Preços de fornecedores: criar ou atualizar associação | Sim | Não |
+| Relatórios de consumo | Sim | Sim |
+
+Uma rota protegida sem token retorna `401`. Um usuário autenticado sem papel suficiente recebe `403` para operações da própria organização; IDs de outra organização continuam retornando `404`.
+
 As migrations de multitenancy criam uma organização legada chamada `Organização legada`, atribuem a ela os usuários e registros existentes e então tornam `organization_id` obrigatório. A migration não foi executada durante esta alteração. Planeje backup e janela de manutenção antes de aplicá-la em ambiente com dados, pois todo o conjunto legado será atribuído a essa organização. O rollback é interrompido se SKU, CNPJ ou código de setor, ou associações produto-fornecedor, se repetirem entre organizações.
 
 ## Ambiente local com Docker
