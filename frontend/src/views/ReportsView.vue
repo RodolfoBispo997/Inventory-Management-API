@@ -1,23 +1,355 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { ArrowDownToLine, ArrowRight, CalendarDays, ChartNoAxesCombined, Download, Filter, Package, RefreshCw, Warehouse } from '@lucide/vue'
-import FeedbackMessage from '../components/FeedbackMessage.vue'
-import PageHeader from '../components/PageHeader.vue'
-import { useFeedback } from '../composables/useFeedback'
-import { allPages, queryString, request } from '../services/api'
-import type { ConsumptionReport, Department } from '../types/api'
+import { computed, onMounted, ref } from "vue";
+import {
+  ArrowDownToLine,
+  ArrowRight,
+  CalendarDays,
+  ChartNoAxesCombined,
+  Download,
+  Filter,
+  Package,
+  RefreshCw,
+  Warehouse,
+} from "@lucide/vue";
+import FeedbackMessage from "../components/FeedbackMessage.vue";
+import PageHeader from "../components/PageHeader.vue";
+import { useFeedback } from "../composables/useFeedback";
+import { allPages, queryString, request } from "../services/api";
+import type { ConsumptionReport, Department } from "../types/api";
 
-const { busy, error, setError } = useFeedback(); const departments = ref<Department[]>([]); const report = ref<ConsumptionReport | null>(null)
-const today = new Date()
-const formatLocalDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-const from = ref(formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1))); const to = ref(formatLocalDate(today)); const departmentId = ref('')
-const totalConsumed = computed(() => report.value?.departments.reduce((total, department) => total + department.consumed_quantity, 0) ?? 0)
-const totalMovements = computed(() => report.value?.departments.reduce((total, department) => total + department.movement_count, 0) ?? 0)
-const productCount = computed(() => report.value?.departments.reduce((total, department) => total + department.products.length, 0) ?? 0)
-async function loadDepartments() { try { departments.value = await allPages<Department>('/departments') } catch (cause) { setError(cause) } }
-async function loadReport() { busy.value = true; error.value = ''; try { const params = queryString({ from: from.value, to: to.value, department_id: departmentId.value || undefined }); report.value = (await request<{ data: ConsumptionReport }>(`/reports/consumption?${params}`)).data } catch (cause) { setError(cause) } finally { busy.value = false } }
-function downloadCsv() { if (!report.value) return; const rows: string[][] = [['Setor', 'Código do setor', 'Produto', 'SKU', 'Quantidade consumida', 'Movimentações']]; report.value.departments.forEach(department => department.products.forEach(product => rows.push([department.name, department.code, product.name, product.sku, String(product.consumed_quantity), String(product.movement_count)]))); const csv = '\uFEFF' + rows.map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(';')).join('\n'); const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `consumo-${from.value}-${to.value}.csv`; anchor.click(); URL.revokeObjectURL(url) }
-onMounted(async () => { await loadDepartments(); await loadReport() })
+const { busy, error, setError } = useFeedback();
+const departments = ref<Department[]>([]);
+const report = ref<ConsumptionReport | null>(null);
+const today = new Date();
+const formatLocalDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const from = ref(formatLocalDate(new Date(today.getFullYear(), today.getMonth(), 1)));
+const to = ref(formatLocalDate(today));
+const departmentId = ref("");
+const totalConsumed = computed(
+  () =>
+    report.value?.departments.reduce(
+      (total, department) => total + department.consumed_quantity,
+      0
+    ) ?? 0
+);
+const totalMovements = computed(
+  () =>
+    report.value?.departments.reduce(
+      (total, department) => total + department.movement_count,
+      0
+    ) ?? 0
+);
+const productCount = computed(
+  () =>
+    report.value?.departments.reduce(
+      (total, department) => total + department.products.length,
+      0
+    ) ?? 0
+);
+async function loadDepartments() {
+  try {
+    departments.value = await allPages<Department>("/departments");
+  } catch (cause) {
+    setError(cause);
+  }
+}
+async function loadReport() {
+  busy.value = true;
+  error.value = "";
+  try {
+    const params = queryString({
+      from: from.value,
+      to: to.value,
+      department_id: departmentId.value || undefined,
+    });
+    report.value = (
+      await request<{ data: ConsumptionReport }>(
+        `/reports/consumption?${params}`
+      )
+    ).data;
+  } catch (cause) {
+    setError(cause);
+  } finally {
+    busy.value = false;
+  }
+}
+function downloadCsv() {
+  if (!report.value) return;
+  const rows: string[][] = [
+    [
+      "Setor",
+      "Código do setor",
+      "Produto",
+      "SKU",
+      "Quantidade consumida",
+      "Movimentações",
+    ],
+  ];
+  report.value.departments.forEach((department) =>
+    department.products.forEach((product) =>
+      rows.push([
+        department.name,
+        department.code,
+        product.name,
+        product.sku,
+        String(product.consumed_quantity),
+        String(product.movement_count),
+      ])
+    )
+  );
+  const csv =
+    "\uFEFF" +
+    rows
+      .map((row) =>
+        row.map((value) => `"${value.replaceAll('"', '""')}"`).join(";")
+      )
+      .join("\n");
+  const url = URL.createObjectURL(
+    new Blob([csv], { type: "text/csv;charset=utf-8;" })
+  );
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `consumo-${from.value}-${to.value}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+onMounted(async () => {
+  await loadDepartments();
+  await loadReport();
+});
 </script>
 
-<template><div class="page-enter"><PageHeader eyebrow="ANÁLISE DE SAÍDAS" title="Relatórios" description="Entenda o consumo da sua operação, por setor e por produto."><template #action><button class="button button-outline" :disabled="!report || busy" @click="downloadCsv"><Download :size="16" /> Exportar CSV</button></template></PageHeader><FeedbackMessage :message="error" /><section class="panel report-filter"><div class="filter-panel-heading"><span class="filter-icon"><Filter :size="16" /></span><div><strong>Filtros do relatório</strong><span>O período considera as datas inicial e final.</span></div></div><div class="report-filter-controls"><label class="date-filter"><span>DE</span><CalendarDays :size="15" /><input v-model="from" type="date" :max="to" /></label><span class="filter-separator">até</span><label class="date-filter"><span>ATÉ</span><CalendarDays :size="15" /><input v-model="to" type="date" :min="from" /></label><label class="date-filter department-select"><span>SETOR</span><Warehouse :size="15" /><select v-model="departmentId"><option value="">Todos os setores</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></label><button class="button button-dark" :disabled="busy" @click="loadReport"><RefreshCw :size="15" :class="{ spinning: busy }" />{{ busy ? 'Buscando…' : 'Gerar relatório' }}</button></div></section><div v-if="report" class="report-summary-grid"><article class="report-stat-card"><span class="metric-icon icon-green"><ArrowDownToLine :size="18" /></span><div><span>TOTAL CONSUMIDO</span><strong>{{ busy ? '—' : totalConsumed.toLocaleString('pt-BR') }} <small>unidades</small></strong></div></article><article class="report-stat-card"><span class="metric-icon icon-blue"><ChartNoAxesCombined :size="18" /></span><div><span>MOVIMENTAÇÕES OUT</span><strong>{{ busy ? '—' : totalMovements.toLocaleString('pt-BR') }} <small>saídas</small></strong></div></article><article class="report-stat-card"><span class="metric-icon icon-lilac"><Package :size="18" /></span><div><span>LINHAS DE PRODUTO</span><strong>{{ busy ? '—' : productCount.toLocaleString('pt-BR') }} <small>por setor</small></strong></div></article></div><section class="report-results"><div class="report-results-heading"><div><div class="panel-title-line"><span class="panel-title-icon icon-green"><ChartNoAxesCombined :size="16" /></span><h2>Consumo detalhado</h2></div><p>{{ report ? `${from.split('-').reverse().join('/')} — ${to.split('-').reverse().join('/')}` : 'Selecione um período para começar' }}</p></div><span v-if="report" class="result-badge">{{ report.departments.length }} setor{{ report.departments.length === 1 ? '' : 'es' }}</span></div><div v-if="busy && !report" class="loading-state"><span class="spinner"></span>Consultando o relatório…</div><div v-else-if="report && report.departments.length" class="report-departments"><article v-for="department in report.departments" :key="department.id" class="report-department"><div class="report-department-heading"><span class="department-card-icon department-color-1"><Warehouse :size="17" /></span><div><strong>{{ department.name }}</strong><span>{{ department.code }} · {{ department.movement_count }} movimentações</span></div><span class="department-total">{{ department.consumed_quantity.toLocaleString('pt-BR') }} <small>un.</small></span></div><div v-if="department.products.length" class="table-wrap report-table-wrap"><table class="data-table"><thead><tr><th>PRODUTO</th><th>SKU</th><th>QUANTIDADE CONSUMIDA</th><th>MOVIMENTAÇÕES</th></tr></thead><tbody><tr v-for="product in department.products" :key="product.id"><td><span class="table-product-icon"><Package :size="15" /></span><strong>{{ product.name }}</strong></td><td class="muted-cell">{{ product.sku }}</td><td><strong>{{ product.consumed_quantity.toLocaleString('pt-BR') }} un.</strong><div class="report-bar"><span :style="{ width: `${Math.max(8, product.consumed_quantity / Math.max(...department.products.map(item => item.consumed_quantity)) * 100)}%` }"></span></div></td><td><span class="movement-count"><ArrowDownToLine :size="14" /> {{ product.movement_count }}</span></td></tr></tbody></table></div></article></div><div v-else-if="report && !busy" class="empty-state"><span class="empty-state-icon"><ChartNoAxesCombined :size="22" /></span><strong>Nenhuma saída registrada no período</strong><span>{{ departmentId ? 'Este setor não tem saídas nesse período.' : 'Registre saídas de produtos para visualizar o consumo por setor.' }}</span><RouterLink v-if="!departmentId" to="/products" class="button button-outline button-small">Registrar movimentação <ArrowRight :size="14" /></RouterLink></div><div v-else-if="report && busy" class="loading-state"><span class="spinner"></span>Atualizando relatório…</div></section><p class="report-footnote"><ChartNoAxesCombined :size="14" /> Relatório calculado a partir de movimentações <strong>OUT</strong> registradas na API durante o período selecionado.</p></div></template>
+<template>
+  <div class="page-enter">
+    <PageHeader
+      eyebrow="ANÁLISE DE SAÍDAS"
+      title="Relatórios"
+      description="Entenda o consumo da sua operação, por setor e por produto."
+      ><template #action
+        ><button
+          class="button button-outline"
+          :disabled="!report || busy"
+          @click="downloadCsv"
+        >
+          <Download :size="16" /> Exportar CSV
+        </button></template
+      ></PageHeader
+    ><FeedbackMessage :message="error" />
+    <section class="panel report-filter">
+      <div class="filter-panel-heading">
+        <span class="filter-icon"><Filter :size="16" /></span>
+        <div>
+          <strong>Filtros do relatório</strong
+          ><span>O período considera as datas inicial e final.</span>
+        </div>
+      </div>
+      <div class="report-filter-controls">
+        <label class="date-filter"
+          ><span>DE</span><CalendarDays :size="15" /><input
+            v-model="from"
+            type="date"
+            :max="to" /></label
+        ><span class="filter-separator">até</span
+        ><label class="date-filter"
+          ><span>ATÉ</span><CalendarDays :size="15" /><input
+            v-model="to"
+            type="date"
+            :min="from" /></label
+        ><label class="date-filter department-select"
+          ><span>SETOR</span><Warehouse :size="15" /><select
+            v-model="departmentId"
+          >
+            <option value="">Todos os setores</option>
+            <option
+              v-for="department in departments"
+              :key="department.id"
+              :value="department.id"
+            >
+              {{ department.name }}
+            </option>
+          </select></label
+        ><button
+          class="button button-dark"
+          :disabled="busy"
+          @click="loadReport"
+        >
+          <RefreshCw :size="15" :class="{ spinning: busy }" />{{
+            busy ? "Buscando…" : "Gerar relatório"
+          }}
+        </button>
+      </div>
+    </section>
+    <div v-if="report" class="report-summary-grid">
+      <article class="report-stat-card">
+        <span class="metric-icon icon-green"
+          ><ArrowDownToLine :size="18"
+        /></span>
+        <div>
+          <span>TOTAL CONSUMIDO</span
+          ><strong
+            >{{ busy ? "—" : totalConsumed.toLocaleString("pt-BR") }}
+            <small>unidades</small></strong
+          >
+        </div>
+      </article>
+      <article class="report-stat-card">
+        <span class="metric-icon icon-blue"
+          ><ChartNoAxesCombined :size="18"
+        /></span>
+        <div>
+          <span>MOVIMENTAÇÕES OUT</span
+          ><strong
+            >{{ busy ? "—" : totalMovements.toLocaleString("pt-BR") }}
+            <small>saídas</small></strong
+          >
+        </div>
+      </article>
+      <article class="report-stat-card">
+        <span class="metric-icon icon-lilac"><Package :size="18" /></span>
+        <div>
+          <span>LINHAS DE PRODUTO</span
+          ><strong
+            >{{ busy ? "—" : productCount.toLocaleString("pt-BR") }}
+            <small>por setor</small></strong
+          >
+        </div>
+      </article>
+    </div>
+    <section class="report-results">
+      <div class="report-results-heading">
+        <div>
+          <div class="panel-title-line">
+            <span class="panel-title-icon icon-green"
+              ><ChartNoAxesCombined :size="16"
+            /></span>
+            <h2>Consumo detalhado</h2>
+          </div>
+          <p>
+            {{
+              report
+                ? `${from.split("-").reverse().join("/")} — ${to
+                    .split("-")
+                    .reverse()
+                    .join("/")}`
+                : "Selecione um período para começar"
+            }}
+          </p>
+        </div>
+        <span v-if="report" class="result-badge"
+          >{{ report.departments.length }} setor{{
+            report.departments.length === 1 ? "" : "es"
+          }}</span
+        >
+      </div>
+      <div v-if="busy && !report" class="loading-state">
+        <span class="spinner"></span>Consultando o relatório…
+      </div>
+      <div
+        v-else-if="report && report.departments.length"
+        class="report-departments"
+      >
+        <article
+          v-for="department in report.departments"
+          :key="department.id"
+          class="report-department"
+        >
+          <div class="report-department-heading">
+            <span class="department-card-icon department-color-1"
+              ><Warehouse :size="17"
+            /></span>
+            <div>
+              <strong>{{ department.name }}</strong
+              ><span
+                >{{ department.code }} ·
+                {{ department.movement_count }} movimentações</span
+              >
+            </div>
+            <span class="department-total"
+              >{{ department.consumed_quantity.toLocaleString("pt-BR") }}
+              <small>un.</small></span
+            >
+          </div>
+          <div
+            v-if="department.products.length"
+            class="table-wrap report-table-wrap"
+          >
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>PRODUTO</th>
+                  <th>SKU</th>
+                  <th>QUANTIDADE CONSUMIDA</th>
+                  <th>MOVIMENTAÇÕES</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="product in department.products" :key="product.id">
+                  <td>
+                    <span class="table-product-icon"
+                      ><Package :size="15" /></span
+                    ><strong>{{ product.name }}</strong>
+                  </td>
+                  <td class="muted-cell">{{ product.sku }}</td>
+                  <td>
+                    <strong
+                      >{{
+                        product.consumed_quantity.toLocaleString("pt-BR")
+                      }}
+                      un.</strong
+                    >
+                    <div class="report-bar">
+                      <span
+                        :style="{
+                          width: `${Math.max(
+                            8,
+                            (product.consumed_quantity /
+                              Math.max(
+                                ...department.products.map(
+                                  (item) => item.consumed_quantity
+                                )
+                              )) *
+                              100
+                          )}%`,
+                        }"
+                      ></span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="movement-count"
+                      ><ArrowDownToLine :size="14" />
+                      {{ product.movement_count }}</span
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+      <div v-else-if="report && !busy" class="empty-state">
+        <span class="empty-state-icon"><ChartNoAxesCombined :size="22" /></span
+        ><strong>Nenhuma saída registrada no período</strong
+        ><span>{{
+          departmentId
+            ? "Este setor não tem saídas nesse período."
+            : "Registre saídas de produtos para visualizar o consumo por setor."
+        }}</span
+        ><RouterLink
+          v-if="!departmentId"
+          to="/products"
+          class="button button-outline button-small"
+          >Registrar movimentação <ArrowRight :size="14"
+        /></RouterLink>
+      </div>
+      <div v-else-if="report && busy" class="loading-state">
+        <span class="spinner"></span>Atualizando relatório…
+      </div>
+    </section>
+    <p class="report-footnote">
+      <ChartNoAxesCombined :size="14" /> Relatório calculado a partir de
+      movimentações <strong>OUT</strong> registradas na API durante o período
+      selecionado.
+    </p>
+  </div>
+</template>

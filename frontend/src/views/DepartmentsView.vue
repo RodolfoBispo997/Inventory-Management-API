@@ -1,19 +1,216 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { ArrowRight, Building2, CirclePlus, Plus, Search, Warehouse } from '@lucide/vue'
-import FeedbackMessage from '../components/FeedbackMessage.vue'
-import PageHeader from '../components/PageHeader.vue'
-import { useFeedback } from '../composables/useFeedback'
-import { allPages, request } from '../services/api'
-import type { Department } from '../types/api'
+import { computed, onMounted, ref } from "vue";
+import {
+  ArrowRight,
+  Building2,
+  CirclePlus,
+  Plus,
+  Search,
+  Warehouse,
+} from "@lucide/vue";
+import FeedbackMessage from "../components/FeedbackMessage.vue";
+import PageHeader from "../components/PageHeader.vue";
+import { useFeedback } from "../composables/useFeedback";
+import { allPages, request } from "../services/api";
+import type { Department } from "../types/api";
 
-const { busy, error, setError, fieldError } = useFeedback(); const departments = ref<Department[]>([]); const search = ref(''); const modal = ref(false); const name = ref(''); const code = ref(''); const notice = ref('')
-const filtered = computed(() => departments.value.filter(department => `${department.name} ${department.code}`.toLowerCase().includes(search.value.toLowerCase())))
-async function load() { busy.value = true; error.value = ''; try { departments.value = await allPages<Department>('/departments') } catch (cause) { setError(cause) } finally { busy.value = false } }
-function openModal() { name.value = ''; code.value = ''; error.value = ''; modal.value = true }
-async function save() { busy.value = true; error.value = ''; try { await request('/departments', { method: 'POST', body: JSON.stringify({ name: name.value, code: code.value }) }); modal.value = false; notice.value = 'Setor cadastrado com sucesso.'; await load() } catch (cause) { setError(cause) } finally { busy.value = false } }
-onMounted(load)
+const { busy, error, setError, fieldError } = useFeedback();
+const departments = ref<Department[]>([]);
+const search = ref("");
+const modal = ref(false);
+const name = ref("");
+const code = ref("");
+const notice = ref("");
+const filtered = computed(() =>
+  departments.value.filter((department) =>
+    `${department.name} ${department.code}`
+      .toLowerCase()
+      .includes(search.value.toLowerCase())
+  )
+);
+async function load() {
+  busy.value = true;
+  error.value = "";
+  try {
+    departments.value = await allPages<Department>("/departments");
+  } catch (cause) {
+    setError(cause);
+  } finally {
+    busy.value = false;
+  }
+}
+function openModal() {
+  name.value = "";
+  code.value = "";
+  error.value = "";
+  modal.value = true;
+}
+async function save() {
+  busy.value = true;
+  error.value = "";
+  try {
+    await request("/departments", {
+      method: "POST",
+      body: JSON.stringify({ name: name.value, code: code.value }),
+    });
+    modal.value = false;
+    notice.value = "Setor cadastrado com sucesso.";
+    await load();
+  } catch (cause) {
+    setError(cause);
+  } finally {
+    busy.value = false;
+  }
+}
+onMounted(load);
 </script>
 
-<template><div class="page-enter"><PageHeader eyebrow="ESTRUTURA OPERACIONAL" title="Setores" description="Organize os centros de consumo da sua empresa."><template #action><button class="button button-dark" @click="openModal"><Plus :size="17" /> Novo setor</button></template></PageHeader><FeedbackMessage :message="error || notice" :success="Boolean(notice && !error)" /><section class="department-banner"><div class="department-banner-icon"><Warehouse :size="21" /></div><div><strong>Consumo por centro de operação</strong><span>Cada saída de estoque é vinculada a um setor. Seus relatórios ganham contexto automaticamente.</span></div><RouterLink to="/reports" class="banner-action">Ver relatórios <ArrowRight :size="15" /></RouterLink></section><div class="listing-toolbar departments-toolbar"><div class="listing-heading"><div class="panel-title-line"><span class="panel-title-icon icon-green"><Building2 :size="16" /></span><h2>Setores cadastrados</h2><span class="count-badge">{{ filtered.length }}</span></div><p>Centros de consumo da organização</p></div><label class="search-box"><Search :size="16" /><input v-model="search" placeholder="Buscar setor..." /></label></div><div v-if="busy && !departments.length" class="loading-state"><span class="spinner"></span>Carregando setores…</div><div v-else-if="filtered.length" class="department-grid"><RouterLink v-for="(department, index) in filtered" :key="department.id" to="/reports" class="department-card"><div class="department-card-top"><span class="department-card-icon" :class="`department-color-${index % 5}`"><Warehouse :size="18" /></span><span class="department-card-id">{{ String(department.id).padStart(3, '0') }}</span></div><h3>{{ department.name }}</h3><div class="department-card-bottom"><span class="code-pill">{{ department.code }}</span><span class="department-reports">Consumo e relatórios <ArrowRight :size="13" /></span></div></RouterLink><button class="department-add-card" @click="openModal"><span><Plus :size="21" /></span><strong>Adicionar setor</strong><small>Organize mais um centro de consumo</small></button></div><div v-else-if="!busy" class="empty-state department-empty"><span class="empty-state-icon"><Warehouse :size="22" /></span><strong>{{ search ? 'Nenhum setor encontrado' : 'Ainda não há setores' }}</strong><span>{{ search ? 'Tente buscar por outro nome ou código.' : 'Crie seu primeiro setor para começar a registrar saídas.' }}</span><button v-if="!search" class="button button-dark button-small" @click="openModal"><CirclePlus :size="15" /> Criar setor</button></div><div v-else class="loading-state"><span class="spinner"></span>Atualizando…</div>
-<div v-if="modal" class="modal-backdrop" @click.self="modal = false"><section class="modal-card"><div class="modal-heading"><div><p class="eyebrow">ESTRUTURA OPERACIONAL</p><h2>Novo setor</h2><p>Identifique um centro de consumo.</p></div><button class="icon-button" aria-label="Fechar" @click="modal = false"><span class="close-cross">×</span></button></div><FeedbackMessage :message="error" /><form class="modal-form" @submit.prevent="save"><label class="form-label">Nome do setor *<input v-model="name" required maxlength="100" placeholder="Ex.: Produção" /></label><small v-if="fieldError('name')" class="field-error">{{ fieldError('name') }}</small><label class="form-label">Código *<input v-model="code" required maxlength="32" placeholder="Ex.: PROD" /></label><small class="helper-text">Use uma sigla fácil de identificar nos relatórios.</small><small v-if="fieldError('code')" class="field-error">{{ fieldError('code') }}</small><div class="modal-actions"><button type="button" class="button button-outline" @click="modal = false">Cancelar</button><button type="submit" class="button button-dark" :disabled="busy">{{ busy ? 'Salvando…' : 'Cadastrar setor' }}</button></div></form></section></div></div></template>
+<template>
+  <div class="page-enter">
+    <PageHeader
+      eyebrow="ESTRUTURA OPERACIONAL"
+      title="Setores"
+      description="Organize os centros de consumo da sua empresa."
+      ><template #action
+        ><button class="button button-dark" @click="openModal">
+          <Plus :size="17" /> Novo setor
+        </button></template
+      ></PageHeader
+    ><FeedbackMessage
+      :message="error || notice"
+      :success="Boolean(notice && !error)"
+    />
+    <section class="department-banner">
+      <div class="department-banner-icon"><Warehouse :size="21" /></div>
+      <div>
+        <strong>Consumo por centro de operação</strong
+        ><span
+          >Cada saída de estoque é vinculada a um setor. Seus relatórios ganham
+          contexto automaticamente.</span
+        >
+      </div>
+      <RouterLink to="/reports" class="banner-action"
+        >Ver relatórios <ArrowRight :size="15"
+      /></RouterLink>
+    </section>
+    <div class="listing-toolbar departments-toolbar">
+      <div class="listing-heading">
+        <div class="panel-title-line">
+          <span class="panel-title-icon icon-green"
+            ><Building2 :size="16"
+          /></span>
+          <h2>Setores cadastrados</h2>
+          <span class="count-badge">{{ filtered.length }}</span>
+        </div>
+        <p>Centros de consumo da organização</p>
+      </div>
+      <label class="search-box"
+        ><Search :size="16" /><input
+          v-model="search"
+          placeholder="Buscar setor..."
+      /></label>
+    </div>
+    <div v-if="busy && !departments.length" class="loading-state">
+      <span class="spinner"></span>Carregando setores…
+    </div>
+    <div v-else-if="filtered.length" class="department-grid">
+      <RouterLink
+        v-for="(department, index) in filtered"
+        :key="department.id"
+        to="/reports"
+        class="department-card"
+        ><div class="department-card-top">
+          <span
+            class="department-card-icon"
+            :class="`department-color-${index % 5}`"
+            ><Warehouse :size="18" /></span
+          ><span class="department-card-id">{{
+            String(department.id).padStart(3, "0")
+          }}</span>
+        </div>
+        <h3>{{ department.name }}</h3>
+        <div class="department-card-bottom">
+          <span class="code-pill">{{ department.code }}</span
+          ><span class="department-reports"
+            >Consumo e relatórios <ArrowRight :size="13"
+          /></span></div></RouterLink
+      ><button class="department-add-card" @click="openModal">
+        <span><Plus :size="21" /></span><strong>Adicionar setor</strong
+        ><small>Organize mais um centro de consumo</small>
+      </button>
+    </div>
+    <div v-else-if="!busy" class="empty-state department-empty">
+      <span class="empty-state-icon"><Warehouse :size="22" /></span
+      ><strong>{{
+        search ? "Nenhum setor encontrado" : "Ainda não há setores"
+      }}</strong
+      ><span>{{
+        search
+          ? "Tente buscar por outro nome ou código."
+          : "Crie seu primeiro setor para começar a registrar saídas."
+      }}</span
+      ><button
+        v-if="!search"
+        class="button button-dark button-small"
+        @click="openModal"
+      >
+        <CirclePlus :size="15" /> Criar setor
+      </button>
+    </div>
+    <div v-else class="loading-state">
+      <span class="spinner"></span>Atualizando…
+    </div>
+    <div v-if="modal" class="modal-backdrop" @click.self="modal = false">
+      <section class="modal-card">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">ESTRUTURA OPERACIONAL</p>
+            <h2>Novo setor</h2>
+            <p>Identifique um centro de consumo.</p>
+          </div>
+          <button
+            class="icon-button"
+            aria-label="Fechar"
+            @click="modal = false"
+          >
+            <span class="close-cross">×</span>
+          </button>
+        </div>
+        <FeedbackMessage :message="error" />
+        <form class="modal-form" @submit.prevent="save">
+          <label class="form-label"
+            >Nome do setor *<input
+              v-model="name"
+              required
+              maxlength="100"
+              placeholder="Ex.: Produção" /></label
+          ><small v-if="fieldError('name')" class="field-error">{{
+            fieldError("name")
+          }}</small
+          ><label class="form-label"
+            >Código *<input
+              v-model="code"
+              required
+              maxlength="32"
+              placeholder="Ex.: PROD" /></label
+          ><small class="helper-text"
+            >Use uma sigla fácil de identificar nos relatórios.</small
+          ><small v-if="fieldError('code')" class="field-error">{{
+            fieldError("code")
+          }}</small>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="button button-outline"
+              @click="modal = false"
+            >
+              Cancelar</button
+            ><button type="submit" class="button button-dark" :disabled="busy">
+              {{ busy ? "Salvando…" : "Cadastrar setor" }}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+</template>
