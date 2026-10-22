@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Organization;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -14,19 +15,23 @@ class ConsumptionReportTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Organization $organization;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $this->organization = $user->organization;
+        Sanctum::actingAs($user);
     }
 
     public function test_aggregates_out_movements_by_department_and_product_and_excludes_entries(): void
     {
-        $operations = Department::factory()->create(['name' => 'Operations', 'code' => 'OPS']);
-        $sales = Department::factory()->create(['name' => 'Sales', 'code' => 'SALES']);
-        $desk = Product::factory()->create(['name' => 'Desk']);
-        $chair = Product::factory()->create(['name' => 'Chair']);
+        $operations = Department::factory()->for($this->organization)->create(['name' => 'Operations', 'code' => 'OPS']);
+        $sales = Department::factory()->for($this->organization)->create(['name' => 'Sales', 'code' => 'SALES']);
+        $desk = Product::factory()->for($this->organization)->create(['name' => 'Desk']);
+        $chair = Product::factory()->for($this->organization)->create(['name' => 'Chair']);
 
         $this->recordMovement($desk, 'OUT', 2, $operations->id, '2026-04-01 00:00:00');
         $this->recordMovement($desk, 'OUT', 4, $operations->id, '2026-04-30 23:59:59');
@@ -54,9 +59,9 @@ class ConsumptionReportTest extends TestCase
 
     public function test_filters_report_by_inclusive_date_range_and_department(): void
     {
-        $targetDepartment = Department::factory()->create(['name' => 'Assembly', 'code' => 'ASSY']);
-        $otherDepartment = Department::factory()->create(['name' => 'Shipping', 'code' => 'SHIP']);
-        $product = Product::factory()->create();
+        $targetDepartment = Department::factory()->for($this->organization)->create(['name' => 'Assembly', 'code' => 'ASSY']);
+        $otherDepartment = Department::factory()->for($this->organization)->create(['name' => 'Shipping', 'code' => 'SHIP']);
+        $product = Product::factory()->for($this->organization)->create();
 
         $this->recordMovement($product, 'OUT', 2, $targetDepartment->id, '2026-05-10 00:00:00');
         $this->recordMovement($product, 'OUT', 5, $targetDepartment->id, '2026-05-10 23:59:59');
@@ -93,6 +98,7 @@ class ConsumptionReportTest extends TestCase
     private function recordMovement(Product $product, string $type, int $quantity, ?int $departmentId, string $createdAt): void
     {
         $movement = $product->movements()->create([
+            'organization_id' => $product->organization_id,
             'type' => $type,
             'quantity' => $quantity,
             'department_id' => $departmentId,

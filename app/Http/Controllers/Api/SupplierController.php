@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Resources\SupplierResource;
-use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SupplierController extends Controller
@@ -14,9 +14,11 @@ class SupplierController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return SupplierResource::collection(Supplier::query()->orderBy('id')->paginate(15));
+        return SupplierResource::collection(
+            $request->user()->organization->suppliers()->orderBy('id')->paginate(15)
+        );
     }
 
     /**
@@ -24,7 +26,7 @@ class SupplierController extends Controller
      */
     public function store(StoreSupplierRequest $request): JsonResponse
     {
-        $supplier = Supplier::query()->create($request->validated());
+        $supplier = $request->user()->organization->suppliers()->create($request->validated());
 
         return (new SupplierResource($supplier))->response()->setStatusCode(201);
     }
@@ -32,8 +34,8 @@ class SupplierController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Supplier $supplier): SupplierResource
+    public function show(Request $request, string $supplier): SupplierResource
     {
-        return new SupplierResource($supplier);
+        return new SupplierResource($request->user()->organization->suppliers()->findOrFail($supplier));
     }
 }

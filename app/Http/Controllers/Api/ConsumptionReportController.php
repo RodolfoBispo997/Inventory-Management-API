@@ -7,6 +7,8 @@ use App\Http\Requests\ConsumptionReportRequest;
 use App\Http\Resources\ConsumptionReportResource;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -18,12 +20,22 @@ class ConsumptionReportController extends Controller
     public function __invoke(ConsumptionReportRequest $request): ConsumptionReportResource
     {
         $filters = $request->validated();
+        $organizationId = $request->user()->organization_id;
         $from = CarbonImmutable::parse($filters['from'])->startOfDay();
         $toExclusive = CarbonImmutable::parse($filters['to'])->addDay()->startOfDay();
 
         $aggregatedProducts = DB::table('stock_movements')
-            ->join('departments', 'departments.id', '=', 'stock_movements.department_id')
-            ->join('products', 'products.id', '=', 'stock_movements.product_id')
+            ->join('departments', function (JoinClause $join): void {
+                $join->on('departments.id', '=', 'stock_movements.department_id')
+                    ->on('departments.organization_id', '=', 'stock_movements.organization_id');
+            })
+            ->join('products', function (JoinClause $join): void {
+                $join->on('products.id', '=', 'stock_movements.product_id')
+                    ->on('products.organization_id', '=', 'stock_movements.organization_id');
+            })
+            ->where('departments.organization_id', $organizationId)
+            ->where('products.organization_id', $organizationId)
+            ->where('stock_movements.organization_id', $organizationId)
             ->where('stock_movements.type', 'OUT')
             ->where('stock_movements.created_at', '>=', $from)
             ->where('stock_movements.created_at', '<', $toExclusive)

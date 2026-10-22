@@ -14,6 +14,7 @@ class AuthenticationTest extends TestCase
     public function test_registers_a_user_and_returns_a_token_without_sensitive_attributes(): void
     {
         $response = $this->postJson('/api/auth/register', [
+            'organization_name' => 'Acme Distribution',
             'name' => 'Rafaela Souza',
             'email' => 'rafaela@example.test',
             'password' => 'a-secure-password',
@@ -27,6 +28,10 @@ class AuthenticationTest extends TestCase
             ->assertJsonMissingPath('data.user.remember_token');
 
         $this->assertDatabaseHas('users', ['email' => 'rafaela@example.test']);
+        $this->assertDatabaseHas('organizations', ['name' => 'Acme Distribution']);
+        $registeredUser = User::query()->where('email', 'rafaela@example.test')->firstOrFail();
+        $this->assertSame('Acme Distribution', $registeredUser->organization->name);
+        $this->assertSame('admin', $registeredUser->role);
         $this->assertDatabaseCount('personal_access_tokens', 1);
     }
 
@@ -35,12 +40,14 @@ class AuthenticationTest extends TestCase
         User::factory()->create(['email' => 'rafaela@example.test']);
 
         $this->postJson('/api/auth/register', [
+            'organization_name' => 'Another Organization',
             'name' => 'Another user',
             'email' => 'rafaela@example.test',
             'password' => 'a-secure-password',
         ])->assertUnprocessable()->assertJsonValidationErrors('email');
 
         $this->postJson('/api/auth/register', [
+            'organization_name' => 'Short Password Organization',
             'name' => 'Short Password',
             'email' => 'short@example.test',
             'password' => 'short',
@@ -85,6 +92,7 @@ class AuthenticationTest extends TestCase
     public function test_throttles_registration_after_ten_attempts_per_ip(): void
     {
         $registration = [
+            'organization_name' => 'Limited Organization',
             'name' => 'Limited User',
             'email' => 'limited-registration@example.test',
             'password' => 'a-secure-password',

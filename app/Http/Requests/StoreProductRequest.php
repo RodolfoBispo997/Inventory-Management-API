@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
@@ -24,9 +25,10 @@ class StoreProductRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:150'],
-            'sku' => ['required', 'string', 'max:64', 'unique:products,sku'],
+            'sku' => ['required', 'string', 'max:64', Rule::unique('products', 'sku')->where('organization_id', $this->user()->organization_id)],
             'minimum_stock' => ['sometimes', 'integer', 'min:0'],
             'current_stock' => ['prohibited'],
+            'organization_id' => ['prohibited'],
         ];
     }
 }

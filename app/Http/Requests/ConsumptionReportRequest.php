@@ -26,7 +26,8 @@ class ConsumptionReportRequest extends FormRequest
         return [
             'from' => ['required', 'date_format:Y-m-d'],
             'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
-            'department_id' => ['sometimes', 'nullable', 'integer', Rule::exists('departments', 'id')],
+            'department_id' => ['sometimes', 'nullable', 'integer', Rule::exists('departments', 'id')->where('organization_id', $this->user()->organization_id)],
+            'organization_id' => ['prohibited'],
         ];
     }
 }

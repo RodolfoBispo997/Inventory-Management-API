@@ -15,7 +15,10 @@ class StockMovementService
     public function record(Product $product, array $data): StockMovement
     {
         return DB::transaction(function () use ($product, $data): StockMovement {
-            $lockedProduct = Product::query()->lockForUpdate()->findOrFail($product->id);
+            $lockedProduct = Product::query()
+                ->where('organization_id', $product->organization_id)
+                ->lockForUpdate()
+                ->findOrFail($product->id);
 
             if ($data['type'] === 'OUT' && $lockedProduct->current_stock < $data['quantity']) {
                 throw ValidationException::withMessages([
@@ -29,7 +32,10 @@ class StockMovementService
                 : -$data['quantity'];
             $lockedProduct->save();
 
-            $movement = $lockedProduct->movements()->create($data);
+            $movement = $lockedProduct->movements()->create([
+                ...$data,
+                'organization_id' => $lockedProduct->organization_id,
+            ]);
 
             $alertRecipient = config('services.stock_alert.email');
             $crossedMinimumStock = $data['type'] === 'OUT'

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -12,11 +13,15 @@ class DepartmentApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Organization $organization;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $this->organization = $user->organization;
+        Sanctum::actingAs($user);
     }
 
     public function test_creates_lists_and_shows_departments(): void
@@ -40,7 +45,7 @@ class DepartmentApiTest extends TestCase
 
     public function test_rejects_missing_duplicate_and_oversized_department_fields(): void
     {
-        Department::factory()->create(['code' => 'MAINT']);
+        Department::factory()->for($this->organization)->create(['code' => 'MAINT']);
 
         $this->postJson('/api/departments', [])->assertUnprocessable()
             ->assertJsonValidationErrors(['name', 'code']);

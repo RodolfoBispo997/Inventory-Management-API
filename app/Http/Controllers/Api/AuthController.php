@@ -6,16 +6,25 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     public function register(RegisterRequest $request): JsonResponse
     {
-        $user = User::query()->create($request->validated());
+        $validated = $request->validated();
+        $user = DB::transaction(function () use ($request, $validated): User {
+            $organization = Organization::query()->create([
+                'name' => $validated['organization_name'],
+            ]);
+
+            return $organization->users()->create($request->safe()->only(['name', 'email', 'password']));
+        });
         $token = $user->createToken('inventory-api')->plainTextToken;
 
         return response()->json([

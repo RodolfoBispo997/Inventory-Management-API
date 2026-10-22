@@ -24,6 +24,7 @@ const { busy, error, setError, fieldError } = useFeedback();
 const registerMode = ref(false);
 const showPassword = ref(false);
 const name = ref("");
+const organizationName = ref("");
 const email = ref("");
 const password = ref("");
 const heading = computed(() =>
@@ -35,7 +36,12 @@ async function submit() {
   try {
     const endpoint = registerMode.value ? "/auth/register" : "/auth/login";
     const body = registerMode.value
-      ? { name: name.value, email: email.value, password: password.value }
+      ? {
+          organization_name: organizationName.value,
+          name: name.value,
+          email: email.value,
+          password: password.value,
+        }
       : { email: email.value, password: password.value };
     const response = await request<{ data: { user: User; token: string } }>(
       endpoint,
@@ -128,6 +134,20 @@ async function submit() {
             </div>
             <small v-if="fieldError('name')" class="field-error">{{
               fieldError("name")
+            }}</small></label
+          ><label v-if="registerMode" class="field-label"
+            >Nome da organização
+            <div class="field-wrap">
+              <Boxes :size="17" /><input
+                v-model="organizationName"
+                required
+                maxlength="150"
+                autocomplete="organization"
+                placeholder="Ex.: Acme Distribuidora"
+              />
+            </div>
+            <small v-if="fieldError('organization_name')" class="field-error">{{
+              fieldError("organization_name")
             }}</small></label
           ><label class="field-label"
             >E-mail

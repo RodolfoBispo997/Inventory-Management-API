@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
 use App\Notifications\StockMinimumReachedNotification;
@@ -17,11 +18,15 @@ class StockMinimumAlertTest extends TestCase
 {
     use DatabaseMigrations;
 
+    private Organization $organization;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $this->organization = $user->organization;
+        Sanctum::actingAs($user);
     }
 
     public function test_queues_notification_when_exit_crosses_minimum_stock(): void
@@ -29,8 +34,8 @@ class StockMinimumAlertTest extends TestCase
         Queue::fake();
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
-        $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'OUT',
@@ -56,8 +61,8 @@ class StockMinimumAlertTest extends TestCase
         Queue::fake();
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
-        $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 4, 'department_id' => $department->id])->assertCreated();
         $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 1, 'department_id' => $department->id])->assertCreated();
@@ -72,8 +77,8 @@ class StockMinimumAlertTest extends TestCase
         Queue::fake();
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
-        $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 4, 'department_id' => $department->id])->assertCreated();
         $this->postJson("/api/products/{$product->id}/movements", ['type' => 'IN', 'quantity' => 3])->assertCreated();
@@ -89,8 +94,8 @@ class StockMinimumAlertTest extends TestCase
         Queue::fake();
         config()->set('services.stock_alert.email', 'warehouse@example.test');
 
-        $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 6]);
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create(['minimum_stock' => 5, 'current_stock' => 6]);
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 7, 'department_id' => $department->id])
             ->assertUnprocessable();
@@ -105,8 +110,8 @@ class StockMinimumAlertTest extends TestCase
         Queue::fake();
         config()->set('services.stock_alert.email', null);
 
-        $product = Product::factory()->create(['minimum_stock' => 5, 'current_stock' => 8]);
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create(['minimum_stock' => 5, 'current_stock' => 8]);
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", ['type' => 'OUT', 'quantity' => 3, 'department_id' => $department->id])->assertCreated();
 

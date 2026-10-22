@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Resources\ProductResource;
-use App\Models\Product;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ProductController extends Controller
@@ -14,9 +14,11 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return ProductResource::collection(Product::query()->orderBy('id')->paginate(15));
+        return ProductResource::collection(
+            $request->user()->organization->products()->orderBy('id')->paginate(15)
+        );
     }
 
     /**
@@ -24,7 +26,7 @@ class ProductController extends Controller
      */
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = Product::query()->create($request->validated());
+        $product = $request->user()->organization->products()->create($request->validated());
 
         return (new ProductResource($product))->response()->setStatusCode(201);
     }
@@ -32,8 +34,8 @@ class ProductController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Product $product): ProductResource
+    public function show(Request $request, string $product): ProductResource
     {
-        return new ProductResource($product);
+        return new ProductResource($request->user()->organization->products()->findOrFail($product));
     }
 }

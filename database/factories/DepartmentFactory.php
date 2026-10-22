@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Department;
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,6 +19,7 @@ class DepartmentFactory extends Factory
     public function definition(): array
     {
         return [
+            'organization_id' => Organization::factory(),
             'name' => fake()->unique()->words(2, true),
             'code' => fake()->unique()->bothify('DEPT-####'),
         ];

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Organization;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -12,16 +13,20 @@ class SupplierApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Organization $organization;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $this->organization = $user->organization;
+        Sanctum::actingAs($user);
     }
 
     public function test_supplier_factory_generates_a_fourteen_digit_cnpj(): void
     {
-        $supplier = Supplier::factory()->create();
+        $supplier = Supplier::factory()->for($this->organization)->create();
 
         $this->assertMatchesRegularExpression('/^\d{14}$/', $supplier->cnpj);
     }
@@ -60,7 +65,7 @@ class SupplierApiTest extends TestCase
 
     public function test_lists_and_shows_suppliers(): void
     {
-        $supplier = Supplier::factory()->create(['name' => 'Northwind']);
+        $supplier = Supplier::factory()->for($this->organization)->create(['name' => 'Northwind']);
 
         $this->getJson('/api/suppliers')->assertOk()
             ->assertJsonPath('data.0.name', 'Northwind')
@@ -86,7 +91,7 @@ class SupplierApiTest extends TestCase
 
     public function test_rejects_duplicate_cnpj_even_when_formatted_differently(): void
     {
-        Supplier::factory()->create(['cnpj' => '12345678000190']);
+        Supplier::factory()->for($this->organization)->create(['cnpj' => '12345678000190']);
 
         $this->postJson('/api/suppliers', [
             'name' => 'Duplicate Supplier',

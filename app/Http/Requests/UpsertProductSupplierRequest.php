@@ -25,6 +25,7 @@ class UpsertProductSupplierRequest extends FormRequest
         return [
             'price' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
             'supplier_product_code' => ['nullable', 'string', 'max:100'],
+            'organization_id' => ['prohibited'],
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Organization;
 use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\User;
@@ -13,17 +14,21 @@ class ProductSupplierPriceApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Organization $organization;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $this->organization = $user->organization;
+        Sanctum::actingAs($user);
     }
 
     public function test_creates_and_updates_supplier_price_without_duplicate_association(): void
     {
-        $product = Product::factory()->create();
-        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->for($this->organization)->create();
+        $supplier = Supplier::factory()->for($this->organization)->create();
         $url = "/api/products/{$product->id}/suppliers/{$supplier->id}";
 
         $this->putJson($url, ['price' => '14.50', 'supplier_product_code' => 'SUP-ABC'])
@@ -47,10 +52,10 @@ class ProductSupplierPriceApiTest extends TestCase
 
     public function test_lists_product_suppliers_in_ascending_price_order(): void
     {
-        $product = Product::factory()->create();
-        $expensive = Supplier::factory()->create(['name' => 'Expensive']);
-        $cheap = Supplier::factory()->create(['name' => 'Cheap']);
-        $middle = Supplier::factory()->create(['name' => 'Middle']);
+        $product = Product::factory()->for($this->organization)->create();
+        $expensive = Supplier::factory()->for($this->organization)->create(['name' => 'Expensive']);
+        $cheap = Supplier::factory()->for($this->organization)->create(['name' => 'Cheap']);
+        $middle = Supplier::factory()->for($this->organization)->create(['name' => 'Middle']);
 
         $this->putJson("/api/products/{$product->id}/suppliers/{$expensive->id}", ['price' => '30.00'])->assertOk();
         $this->putJson("/api/products/{$product->id}/suppliers/{$cheap->id}", ['price' => '9.99'])->assertOk();
@@ -67,8 +72,8 @@ class ProductSupplierPriceApiTest extends TestCase
 
     public function test_rejects_negative_or_over_precision_prices(): void
     {
-        $product = Product::factory()->create();
-        $supplier = Supplier::factory()->create();
+        $product = Product::factory()->for($this->organization)->create();
+        $supplier = Supplier::factory()->for($this->organization)->create();
         $url = "/api/products/{$product->id}/suppliers/{$supplier->id}";
 
         $this->putJson($url, ['price' => '-0.01'])->assertUnprocessable()
@@ -82,10 +87,10 @@ class ProductSupplierPriceApiTest extends TestCase
 
     public function test_returns_not_found_for_missing_product_or_supplier(): void
     {
-        $supplier = Supplier::factory()->create();
+        $supplier = Supplier::factory()->for($this->organization)->create();
         $this->getJson('/api/products/999999/suppliers')->assertNotFound();
 
-        $product = Product::factory()->create();
+        $product = Product::factory()->for($this->organization)->create();
         $this->putJson("/api/products/{$product->id}/suppliers/999999", ['price' => '1.00'])
             ->assertNotFound();
     }

@@ -12,7 +12,7 @@ class StockMovement extends Model
     /** @use HasFactory<StockMovementFactory> */
     use HasFactory;
 
-    protected $fillable = ['type', 'quantity', 'reason', 'department_id'];
+    protected $fillable = ['organization_id', 'type', 'quantity', 'reason', 'department_id'];
 
     protected function casts(): array
     {
@@ -27,5 +27,10 @@ class StockMovement extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 }

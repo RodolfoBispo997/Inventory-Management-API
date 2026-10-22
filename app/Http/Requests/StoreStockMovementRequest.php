@@ -32,8 +32,9 @@ class StoreStockMovementRequest extends FormRequest
                 Rule::prohibitedIf($this->input('type') === 'IN'),
                 'nullable',
                 'integer',
-                Rule::exists('departments', 'id'),
+                Rule::exists('departments', 'id')->where('organization_id', $this->user()->organization_id),
             ],
+            'organization_id' => ['prohibited'],
         ];
     }
 }

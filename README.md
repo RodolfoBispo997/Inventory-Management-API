@@ -20,8 +20,11 @@ Os tokens não têm expiração automática nesta versão. A configuração padr
 
 ### Cadastrar usuário — `POST /api/auth/register`
 
+Cada cadastro cria uma organização e seu primeiro usuário com papel `admin`. O nome da organização é obrigatório; o papel é atribuído pelo servidor e não pode ser enviado pelo cliente.
+
 ```json
 {
+  "organization_name": "Acme Distribuidora",
   "name": "Rafaela Souza",
   "email": "rafaela@example.test",
   "password": "a-secure-password"
@@ -63,7 +66,9 @@ curl http://localhost:8000/api/products \
   -H "Authorization: Bearer 1|token-em-texto-plano"
 ```
 
-Todas as rotas de produtos, movimentações, setores, fornecedores, preços e relatórios exigem autenticação. Usuários compartilham o mesmo estoque nesta versão.
+Cada usuário pertence a uma única organização. Nesta etapa, não há convites ou gestão de membros. Produtos, fornecedores, setores, movimentações, associações de preço e relatórios são isolados por organização. A API define a organização a partir do token autenticado e rejeita `organization_id` enviado pelo cliente. SKU, CNPJ e código de setor são únicos dentro da organização; o e-mail permanece globalmente único para manter o login identificado por e-mail sem ambiguidade.
+
+As migrations de multitenancy criam uma organização legada chamada `Organização legada`, atribuem a ela os usuários e registros existentes e então tornam `organization_id` obrigatório. A migration não foi executada durante esta alteração. Planeje backup e janela de manutenção antes de aplicá-la em ambiente com dados, pois todo o conjunto legado será atribuído a essa organização. O rollback é interrompido se SKU, CNPJ ou código de setor, ou associações produto-fornecedor, se repetirem entre organizações.
 
 ## Ambiente local com Docker
 
@@ -94,7 +99,7 @@ O setup atual do Laragon continua disponível por `composer run setup`, `compose
 
 ## Integração contínua
 
-O workflow `.github/workflows/ci.yml` executa automaticamente em `push` e `pull_request`. Ele mantém os testes e Pint com SQLite, roda migrations e a suíte com MySQL 8.4 após o healthcheck do serviço e valida o build da imagem Docker.
+O workflow `.github/workflows/ci.yml` executa automaticamente em `push` e `pull_request`. Ele compila o frontend com Node.js, mantém os testes e Pint com SQLite, roda migrations e a suíte com MySQL 8.4 após o healthcheck do serviço e valida o build da imagem Docker.
 
 ## Produtos e estoque
 

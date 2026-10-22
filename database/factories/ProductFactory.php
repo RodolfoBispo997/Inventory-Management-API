@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Organization;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,6 +19,7 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         return [
+            'organization_id' => Organization::factory(),
             'name' => fake()->words(3, true),
             'sku' => fake()->unique()->bothify('SKU-####'),
             'minimum_stock' => 0,

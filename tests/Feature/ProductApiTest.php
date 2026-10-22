@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Department;
+use App\Models\Organization;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,11 +14,15 @@ class ProductApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Organization $organization;
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        $this->organization = $user->organization;
+        Sanctum::actingAs($user);
     }
 
     public function test_creates_product_with_zero_stock(): void
@@ -41,7 +46,7 @@ class ProductApiTest extends TestCase
 
     public function test_lists_and_shows_products_with_pagination(): void
     {
-        $product = Product::factory()->create(['name' => 'Monitor', 'sku' => 'MON-001']);
+        $product = Product::factory()->for($this->organization)->create(['name' => 'Monitor', 'sku' => 'MON-001']);
 
         $this->getJson('/api/products')->assertOk()
             ->assertJsonPath('data.0.sku', 'MON-001')
@@ -54,7 +59,7 @@ class ProductApiTest extends TestCase
 
     public function test_rejects_duplicate_sku(): void
     {
-        Product::factory()->create(['sku' => 'DUP-001']);
+        Product::factory()->for($this->organization)->create(['sku' => 'DUP-001']);
 
         $this->postJson('/api/products', ['name' => 'Another', 'sku' => 'DUP-001'])
             ->assertUnprocessable()
@@ -65,7 +70,7 @@ class ProductApiTest extends TestCase
 
     public function test_records_stock_entry_and_updates_product_balance(): void
     {
-        $product = Product::factory()->create();
+        $product = Product::factory()->for($this->organization)->create();
 
         $response = $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'IN',
@@ -97,8 +102,8 @@ class ProductApiTest extends TestCase
 
     public function test_records_valid_stock_exit_and_updates_product_balance(): void
     {
-        $product = Product::factory()->create(['current_stock' => 8]);
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create(['current_stock' => 8]);
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'OUT',
@@ -125,8 +130,8 @@ class ProductApiTest extends TestCase
 
     public function test_rejects_stock_exit_above_balance_without_changes(): void
     {
-        $product = Product::factory()->create(['current_stock' => 2]);
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create(['current_stock' => 2]);
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'OUT',
@@ -140,7 +145,7 @@ class ProductApiTest extends TestCase
 
     public function test_requires_an_existing_department_for_stock_exit(): void
     {
-        $product = Product::factory()->create(['current_stock' => 8]);
+        $product = Product::factory()->for($this->organization)->create(['current_stock' => 8]);
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'OUT',
@@ -159,8 +164,8 @@ class ProductApiTest extends TestCase
 
     public function test_rejects_department_for_stock_entry(): void
     {
-        $product = Product::factory()->create();
-        $department = Department::factory()->create();
+        $product = Product::factory()->for($this->organization)->create();
+        $department = Department::factory()->for($this->organization)->create();
 
         $this->postJson("/api/products/{$product->id}/movements", [
             'type' => 'IN',
@@ -174,9 +179,9 @@ class ProductApiTest extends TestCase
 
     public function test_rejects_invalid_movement_type_and_non_positive_quantities(): void
     {
-        $product = Product::factory()->create();
+        $product = Product::factory()->for($this->organization)->create();
 
-        $department = Department::factory()->create();
+        $department = Department::factory()->for($this->organization)->create();
 
         foreach ([['type' => 'TRANSFER', 'quantity' => 1], ['type' => 'IN', 'quantity' => 0], ['type' => 'OUT', 'quantity' => -1, 'department_id' => $department->id]] as $payload) {
             $this->postJson("/api/products/{$product->id}/movements", $payload)

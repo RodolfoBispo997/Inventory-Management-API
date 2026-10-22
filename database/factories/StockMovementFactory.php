@@ -25,4 +25,11 @@ class StockMovementFactory extends Factory
             'reason' => fake()->optional()->sentence(4),
         ];
     }
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function (StockMovement $movement): void {
+            $movement->organization_id = $movement->product->organization_id;
+        });
+    }
 }

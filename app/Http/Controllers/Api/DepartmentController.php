@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDepartmentRequest;
 use App\Http\Resources\DepartmentResource;
-use App\Models\Department;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class DepartmentController extends Controller
@@ -14,9 +14,11 @@ class DepartmentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return DepartmentResource::collection(Department::query()->orderBy('name')->orderBy('id')->paginate(15));
+        return DepartmentResource::collection(
+            $request->user()->organization->departments()->orderBy('name')->orderBy('id')->paginate(15)
+        );
     }
 
     /**
@@ -24,7 +26,7 @@ class DepartmentController extends Controller
      */
     public function store(StoreDepartmentRequest $request): JsonResponse
     {
-        $department = Department::query()->create($request->validated());
+        $department = $request->user()->organization->departments()->create($request->validated());
 
         return (new DepartmentResource($department))->response()->setStatusCode(201);
     }
@@ -32,8 +34,8 @@ class DepartmentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Department $department): DepartmentResource
+    public function show(Request $request, string $department): DepartmentResource
     {
-        return new DepartmentResource($department);
+        return new DepartmentResource($request->user()->organization->departments()->findOrFail($department));
     }
 }

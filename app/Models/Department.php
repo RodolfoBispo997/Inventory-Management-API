@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\DepartmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Model
@@ -16,6 +17,12 @@ class Department extends Model
 
     public function movements(): HasMany
     {
-        return $this->hasMany(StockMovement::class);
+        return $this->hasMany(StockMovement::class)
+            ->where('organization_id', $this->organization_id);
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 }
