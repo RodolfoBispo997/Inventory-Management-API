@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConsumptionReportController;
 use App\Http\Controllers\Api\DepartmentController;
+use App\Http\Controllers\Api\OrganizationInvitationController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductSupplierController;
 use App\Http\Controllers\Api\StockMovementController;
@@ -19,7 +20,16 @@ Route::prefix('auth')->group(function (): void {
     });
 });
 
+Route::post('invitations/accept', [OrganizationInvitationController::class, 'accept'])
+    ->middleware('throttle:auth-register')
+    ->name('api.invitations.accept');
+
 Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware('can:manage-inventory-catalog')->group(function (): void {
+        Route::apiResource('organization-invitations', OrganizationInvitationController::class)
+            ->only(['index', 'store', 'show']);
+    });
+
     Route::apiResource('products', ProductController::class)->only(['index', 'show']);
     Route::post('products', [ProductController::class, 'store'])->middleware('can:manage-inventory-catalog');
 

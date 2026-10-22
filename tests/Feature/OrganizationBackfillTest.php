@@ -15,6 +15,9 @@ class OrganizationBackfillTest extends TestCase
 
     public function test_backfills_existing_business_data_before_requiring_organization_ids(): void
     {
+        $invitationMigration = require database_path('migrations/2026_10_22_161643_create_organization_invitations_table.php');
+        $invitationMigration->down();
+
         $migration = require database_path('migrations/2026_10_22_144342_add_organization_id_to_business_tables.php');
         $migration->down();
 

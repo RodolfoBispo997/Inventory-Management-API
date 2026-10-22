@@ -38,4 +38,9 @@ class Organization extends Model
     {
         return $this->hasMany(StockMovement::class);
     }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(OrganizationInvitation::class);
+    }
 }

@@ -66,7 +66,7 @@ curl http://localhost:8000/api/products \
   -H "Authorization: Bearer 1|token-em-texto-plano"
 ```
 
-Cada usuário pertence a uma única organização. Nesta etapa, não há convites ou gestão de membros. Produtos, fornecedores, setores, movimentações, associações de preço e relatórios são isolados por organização. A API define a organização a partir do token autenticado e rejeita `organization_id` enviado pelo cliente. SKU, CNPJ e código de setor são únicos dentro da organização; o e-mail permanece globalmente único para manter o login identificado por e-mail sem ambiguidade.
+Cada usuário pertence a uma única organização. Produtos, fornecedores, setores, movimentações, associações de preço, convites e relatórios são isolados por organização. A API define a organização a partir do token autenticado e rejeita `organization_id` enviado pelo cliente. SKU, CNPJ e código de setor são únicos dentro da organização; o e-mail permanece globalmente único para manter o login identificado por e-mail sem ambiguidade.
 
 ### Papéis e permissões
 
@@ -80,8 +80,20 @@ O cadastro público cria o primeiro usuário da organização como `admin`. Os p
 | Preços de fornecedores: consultar | Sim | Sim |
 | Preços de fornecedores: criar ou atualizar associação | Sim | Não |
 | Relatórios de consumo | Sim | Sim |
+| Convites: criar e consultar | Sim | Não |
 
 Uma rota protegida sem token retorna `401`. Um usuário autenticado sem papel suficiente recebe `403` para operações da própria organização; IDs de outra organização continuam retornando `404`.
+
+### Convidar operadores
+
+Somente administradores podem criar e consultar convites da própria organização. Um convite só pode ser enviado para um e-mail ainda não cadastrado. O token aleatório é enviado pelo mailer configurado e fica armazenado apenas como hash; convites expiram em sete dias e podem ser aceitos uma única vez. O envio é síncrono pelo mailer configurado, para que o token não seja persistido em payload de fila.
+
+- `POST /api/organization-invitations` cria convite. Payload: `{"email":"operador@example.test"}`. A resposta não contém o token.
+- `GET /api/organization-invitations` lista os convites da organização autenticada.
+- `GET /api/organization-invitations/{id}` consulta um convite da organização autenticada; IDs de outra organização retornam `404`.
+- `POST /api/invitations/accept` aceita um convite sem autenticação. Envie `token`, `name` e `password`; o usuário é criado como `operator` na organização do convite. `role` e `organization_id` não são aceitos.
+
+Convites inválidos, expirados, usados ou cujo e-mail já foi cadastrado são rejeitados com `422`. O cadastro do operador e a marcação do convite como aceito ocorrem em uma única transação.
 
 As migrations de multitenancy criam uma organização legada chamada `Organização legada`, atribuem a ela os usuários e registros existentes e então tornam `organization_id` obrigatório. A migration não foi executada durante esta alteração. Planeje backup e janela de manutenção antes de aplicá-la em ambiente com dados, pois todo o conjunto legado será atribuído a essa organização. O rollback é interrompido se SKU, CNPJ ou código de setor, ou associações produto-fornecedor, se repetirem entre organizações.
 

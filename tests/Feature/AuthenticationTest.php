@@ -138,7 +138,7 @@ class AuthenticationTest extends TestCase
 
     public function test_every_api_business_route_uses_sanctum_authentication(): void
     {
-        $publicRoutes = ['api/auth/register', 'api/auth/login'];
+        $publicRoutes = ['api/auth/register', 'api/auth/login', 'api/invitations/accept'];
         $businessRoutes = collect(app('router')->getRoutes())
             ->filter(fn ($route): bool => str_starts_with($route->uri(), 'api/'))
             ->reject(fn ($route): bool => in_array($route->uri(), $publicRoutes, true));
