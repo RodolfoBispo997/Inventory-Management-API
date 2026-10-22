@@ -15,6 +15,7 @@ import PageHeader from "../components/PageHeader.vue";
 import FeedbackMessage from "../components/FeedbackMessage.vue";
 import { allPages, queryString, request } from "../services/api";
 import { useFeedback } from "../composables/useFeedback";
+import { isAdmin } from "../composables/useAuthorization";
 import type { ConsumptionReport, Department, Product } from "../types/api";
 
 const { busy, error, setError } = useFeedback();
@@ -237,10 +238,12 @@ onMounted(load);
           ><span>{{
             products.length
               ? "Todos os produtos estão dentro do nível mínimo."
-              : "Cadastre seu primeiro produto para começar."
+              : isAdmin
+                ? "Cadastre seu primeiro produto para começar."
+                : "Nenhum produto foi cadastrado nesta organização ainda."
           }}</span
           ><RouterLink
-            v-if="!products.length"
+            v-if="!products.length && isAdmin"
             class="button button-outline button-small"
             to="/products"
             >Cadastrar produto</RouterLink

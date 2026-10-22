@@ -14,6 +14,7 @@ import {
 import FeedbackMessage from "../components/FeedbackMessage.vue";
 import PageHeader from "../components/PageHeader.vue";
 import { useFeedback } from "../composables/useFeedback";
+import { isAdmin } from "../composables/useAuthorization";
 import { allPages, request } from "../services/api";
 import type {
   Department,
@@ -151,12 +152,13 @@ function openDialog(
   kind: "product" | "movement" | "supplier",
   product?: Product
 ) {
+  if (kind !== "movement" && !isAdmin.value) return;
   resetForms();
   selected.value = product ?? null;
   modal.value = kind;
 }
 async function saveSupplier() {
-  if (!selected.value) return;
+  if (!selected.value || !isAdmin.value) return;
   busy.value = true;
   error.value = "";
   try {
@@ -189,8 +191,8 @@ onMounted(load);
     <PageHeader
       eyebrow="CATÁLOGO E ESTOQUE"
       title="Produtos"
-      description="Cadastre produtos, confira níveis e registre movimentações."
-      ><template #action
+      :description="isAdmin ? 'Cadastre produtos, confira níveis e registre movimentações.' : 'Confira os níveis de estoque e registre movimentações.'"
+      ><template v-if="isAdmin" #action
         ><button class="button button-dark" @click="openDialog('product')">
           <Plus :size="17" /> Novo produto
         </button></template
@@ -298,10 +300,12 @@ onMounted(load);
         ><span>{{
           search
             ? "Tente buscar por outro nome ou SKU."
-            : "Adicione produtos para começar a controlar seu estoque."
+            : isAdmin
+              ? "Adicione produtos para começar a controlar seu estoque."
+              : "Peça a um administrador para cadastrar os produtos da organização."
         }}</span
         ><button
-          v-if="!search"
+          v-if="!search && isAdmin"
           class="button button-dark button-small"
           @click="openDialog('product')"
         >
@@ -548,6 +552,7 @@ onMounted(load);
         </div>
         <div class="drawer-actions">
           <button
+            v-if="isAdmin"
             class="button button-outline button-small"
             @click="openDialog('supplier', selected)"
           >

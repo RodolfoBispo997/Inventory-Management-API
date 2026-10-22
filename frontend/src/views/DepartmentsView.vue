@@ -11,6 +11,7 @@ import {
 import FeedbackMessage from "../components/FeedbackMessage.vue";
 import PageHeader from "../components/PageHeader.vue";
 import { useFeedback } from "../composables/useFeedback";
+import { isAdmin } from "../composables/useAuthorization";
 import { allPages, request } from "../services/api";
 import type { Department } from "../types/api";
 
@@ -40,12 +41,14 @@ async function load() {
   }
 }
 function openModal() {
+  if (!isAdmin.value) return;
   name.value = "";
   code.value = "";
   error.value = "";
   modal.value = true;
 }
 async function save() {
+  if (!isAdmin.value) return;
   busy.value = true;
   error.value = "";
   try {
@@ -71,7 +74,7 @@ onMounted(load);
       eyebrow="ESTRUTURA OPERACIONAL"
       title="Setores"
       description="Organize os centros de consumo da sua empresa."
-      ><template #action
+      ><template v-if="isAdmin" #action
         ><button class="button button-dark" @click="openModal">
           <Plus :size="17" /> Novo setor
         </button></template
@@ -134,7 +137,7 @@ onMounted(load);
           ><span class="department-reports"
             >Consumo e relatórios <ArrowRight :size="13"
           /></span></div></RouterLink
-      ><button class="department-add-card" @click="openModal">
+      ><button v-if="isAdmin" class="department-add-card" @click="openModal">
         <span><Plus :size="21" /></span><strong>Adicionar setor</strong
         ><small>Organize mais um centro de consumo</small>
       </button>
@@ -147,10 +150,12 @@ onMounted(load);
       ><span>{{
         search
           ? "Tente buscar por outro nome ou código."
-          : "Crie seu primeiro setor para começar a registrar saídas."
+          : isAdmin
+            ? "Crie seu primeiro setor para começar a registrar saídas."
+            : "Peça a um administrador para cadastrar setores antes de registrar saídas."
       }}</span
       ><button
-        v-if="!search"
+        v-if="!search && isAdmin"
         class="button button-dark button-small"
         @click="openModal"
       >

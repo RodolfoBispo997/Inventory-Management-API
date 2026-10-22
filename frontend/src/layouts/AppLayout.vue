@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   Boxes,
@@ -9,10 +9,12 @@ import {
   Menu,
   Package,
   Truck,
+  UserRoundPlus,
   Warehouse,
   X,
 } from "@lucide/vue";
 import { clearToken, getToken, request } from "../services/api";
+import { checkAdminPermission, isAdmin, resetAuthorization } from "../composables/useAuthorization";
 import type { User } from "../types/api";
 
 const route = useRoute();
@@ -28,17 +30,41 @@ const links = [
   { label: "Fornecedores", to: "/suppliers", icon: Truck },
   { label: "Setores", to: "/departments", icon: Warehouse },
   { label: "Relatórios", to: "/reports", icon: ChartNoAxesCombined },
+  { label: "Convites", to: "/invitations", icon: UserRoundPlus, admin: true },
 ];
+const visibleLinks = computed(() => links.filter((link) => !link.admin || isAdmin.value));
+const roleLabel = computed(() => isAdmin.value === null ? "Verificando acesso…" : isAdmin.value ? "Administrador" : "Operador");
 const pageTitle = computed(
   () =>
-    links.find((link) => link.to === route.path)?.label ?? "Gestão de estoque"
+    visibleLinks.value.find((link) => link.to === route.path)?.label ?? "Gestão de estoque"
 );
-if (getToken())
-  request<{ data: User }>("/auth/me")
-    .then((result) => {
-      user.value = result.data;
-    })
-    .catch(() => undefined);
+let loadedToken: string | null = null;
+watch(
+  () => route.meta.auth,
+  (requiresAuth) => {
+    const token = getToken();
+    if (!token) {
+      user.value = null;
+      loadedToken = null;
+      resetAuthorization();
+      return;
+    }
+
+    if (!requiresAuth || loadedToken === token) {
+      return;
+    }
+
+    loadedToken = token;
+    user.value = null;
+    request<{ data: User }>("/auth/me")
+      .then((result) => {
+        user.value = result.data;
+      })
+      .catch(() => undefined);
+    checkAdminPermission().catch(() => undefined);
+  },
+  { immediate: true },
+);
 async function logout() {
   try {
     await request("/auth/logout", { method: "POST" });
@@ -46,13 +72,16 @@ async function logout() {
     /* A sessão é encerrada localmente mesmo sem resposta. */
   } finally {
     clearToken();
+    user.value = null;
+    loadedToken = null;
+    resetAuthorization();
     await router.replace({ name: "login" });
   }
 }
 </script>
 
 <template>
-  <RouterView v-if="route.meta.guest" />
+  <RouterView v-if="route.meta.guest || route.meta.public" />
   <div v-else-if="authenticated" class="app-shell">
     <div v-if="menuOpen" class="mobile-scrim" @click="menuOpen = false"></div>
     <aside class="sidebar" :class="{ 'sidebar-open': menuOpen }">
@@ -70,7 +99,7 @@ async function logout() {
       <p class="side-label">WORKSPACE</p>
       <nav class="nav-list">
         <RouterLink
-          v-for="link in links"
+          v-for="link in visibleLinks"
           :key="link.to"
           :to="link.to"
           class="nav-link"
@@ -96,7 +125,7 @@ async function logout() {
         }}</span>
         <div class="user-info">
           <strong>{{ user?.name ?? "Conta" }}</strong
-          ><span>Administrador</span>
+          ><span>{{ roleLabel }}</span>
         </div>
         <button
           class="logout-button"

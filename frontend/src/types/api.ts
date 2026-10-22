@@ -3,6 +3,14 @@ export interface User {
     name: string;
     email: string;
 }
+export interface OrganizationInvitation {
+    id: number;
+    email: string;
+    invited_by?: { id: number; name: string };
+    expires_at: string;
+    accepted_at: string | null;
+    created_at: string;
+}
 export interface Product {
     id: number;
     name: string;

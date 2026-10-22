@@ -215,6 +215,10 @@ async function submit() {
             {{ registerMode ? "Faça login" : "Crie sua conta" }}
           </button>
         </p>
+        <p v-if="!registerMode" class="auth-switch">
+          Recebeu um convite?
+          <RouterLink to="/accept-invitation">Aceite aqui</RouterLink>
+        </p>
         <div class="auth-footnote">
           <span><ShieldCheck :size="15" /></span> Sua sessão é protegida com
           autenticação segura.

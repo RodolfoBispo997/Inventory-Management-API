@@ -15,6 +15,7 @@ import {
 import FeedbackMessage from "../components/FeedbackMessage.vue";
 import PageHeader from "../components/PageHeader.vue";
 import { useFeedback } from "../composables/useFeedback";
+import { isAdmin } from "../composables/useAuthorization";
 import { allPages, request } from "../services/api";
 import type { Supplier } from "../types/api";
 
@@ -46,6 +47,7 @@ async function load() {
   }
 }
 function openModal() {
+  if (!isAdmin.value) return;
   name.value = "";
   cnpj.value = "";
   email.value = "";
@@ -54,6 +56,7 @@ function openModal() {
   modal.value = true;
 }
 async function save() {
+  if (!isAdmin.value) return;
   busy.value = true;
   error.value = "";
   try {
@@ -84,7 +87,7 @@ onMounted(load);
       eyebrow="CADEIA DE SUPRIMENTOS"
       title="Fornecedores"
       description="Gerencie quem fornece para sua operação e acompanhe os cadastros."
-      ><template #action
+      ><template v-if="isAdmin" #action
         ><button class="button button-dark" @click="openModal">
           <Plus :size="17" /> Novo fornecedor
         </button></template
@@ -170,10 +173,12 @@ onMounted(load);
         ><span>{{
           search
             ? "Tente outra palavra ou CNPJ."
-            : "Cadastre fornecedores para associar preços aos produtos."
+            : isAdmin
+              ? "Cadastre fornecedores para associar preços aos produtos."
+              : "Nenhum fornecedor foi cadastrado nesta organização ainda."
         }}</span
         ><button
-          v-if="!search"
+          v-if="!search && isAdmin"
           class="button button-dark button-small"
           @click="openModal"
         >
