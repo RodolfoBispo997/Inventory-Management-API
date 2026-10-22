@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -81,10 +82,9 @@ class OrganizationBackfillTest extends TestCase
         $this->assertDatabaseHas('product_supplier', ['product_id' => $productId, 'supplier_id' => $supplierId, 'organization_id' => $organizationId]);
 
         foreach (['users', 'products', 'suppliers', 'departments', 'stock_movements', 'product_supplier'] as $tableName) {
-            $columns = DB::select("PRAGMA table_info('{$tableName}')");
-            $organizationColumn = collect($columns)->firstWhere('name', 'organization_id');
+            $organizationColumn = collect(Schema::getColumns($tableName))->firstWhere('name', 'organization_id');
 
-            $this->assertSame(1, $organizationColumn->notnull, "{$tableName}.organization_id must be required after the backfill.");
+            $this->assertFalse($organizationColumn['nullable'], "{$tableName}.organization_id must be required after the backfill.");
         }
     }
 
@@ -149,13 +149,13 @@ class OrganizationBackfillTest extends TestCase
         }
 
         foreach (['users', 'products', 'suppliers', 'departments', 'stock_movements', 'product_supplier'] as $tableName) {
-            $columns = collect(DB::select("PRAGMA table_info('{$tableName}')"))->pluck('name');
+            $columns = collect(Schema::getColumns($tableName))->pluck('name');
             $this->assertContains('organization_id', $columns, "{$tableName}.organization_id should remain after the refused rollback.");
         }
 
-        $productSupplierIndexes = collect(DB::select("PRAGMA index_list('product_supplier')"));
-        $this->assertTrue($productSupplierIndexes->contains(fn (object $index): bool => $index->name === 'product_supplier_organization_id_product_id_supplier_id_unique'));
-        $this->assertFalse($productSupplierIndexes->contains(fn (object $index): bool => $index->name === 'product_supplier_product_id_supplier_id_unique'));
+        $productSupplierIndexes = collect(Schema::getIndexes('product_supplier'));
+        $this->assertTrue($productSupplierIndexes->contains(fn (array $index): bool => $index['name'] === 'product_supplier_organization_id_product_id_supplier_id_unique'));
+        $this->assertFalse($productSupplierIndexes->contains(fn (array $index): bool => $index['name'] === 'product_supplier_product_id_supplier_id_unique'));
         $this->assertDatabaseCount('product_supplier', 2);
         $this->assertDatabaseHas('organizations', ['id' => $organizations]);
         $this->assertDatabaseHas('organizations', ['id' => $secondOrganizationId]);

@@ -96,6 +96,12 @@ return new class extends Migration
             throw new RuntimeException('Cannot roll back organizations while duplicate product-supplier associations exist across organizations.');
         }
 
+        foreach (['users', 'products', 'suppliers', 'departments', 'stock_movements', 'product_supplier'] as $tableName) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->dropForeign(['organization_id']);
+            });
+        }
+
         Schema::table('products', function (Blueprint $table): void {
             $table->dropUnique(['organization_id', 'sku']);
             $table->unique('sku');
@@ -118,7 +124,7 @@ return new class extends Migration
 
         foreach (['users', 'products', 'suppliers', 'departments', 'stock_movements', 'product_supplier'] as $tableName) {
             Schema::table($tableName, function (Blueprint $table): void {
-                $table->dropConstrainedForeignId('organization_id');
+                $table->dropColumn('organization_id');
             });
         }
 
