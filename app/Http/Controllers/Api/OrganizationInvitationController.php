@@ -8,6 +8,8 @@ use App\Http\Requests\StoreOrganizationInvitationRequest;
 use App\Http\Resources\OrganizationInvitationResource;
 use App\Http\Resources\UserResource;
 use App\Services\OrganizationInvitationService;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -39,6 +41,8 @@ class OrganizationInvitationController extends Controller
             ->setStatusCode(201);
     }
 
+    #[PathParameter('invitation', type: 'int')]
+    #[Response(status: 404, description: 'Invitation not found in the authenticated organization.')]
     public function show(Request $request, string $invitation): OrganizationInvitationResource
     {
         return new OrganizationInvitationResource(

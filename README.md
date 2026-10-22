@@ -12,6 +12,10 @@ Instale e prepare a aplicação com `composer run setup`. Inicie o ambiente loca
 
 As respostas usam JSON. Listagens são paginadas com 15 registros por página e aceitam `?page=2`.
 
+## Documentação OpenAPI local
+
+Com a aplicação em ambiente `local`, abra `http://localhost:8000/docs/api` para consultar a interface OpenAPI ou `http://localhost:8000/docs/api.json` para obter a especificação JSON. As rotas da documentação são bloqueadas fora do ambiente local por padrão. O documento cobre os endpoints públicos e protegidos, incluindo autenticação Bearer do Sanctum, regras de acesso por papel e paginação.
+
 ## Autenticação
 
 O cadastro e o login emitem tokens pessoais do Laravel Sanctum. Envie o token no cabeçalho `Authorization: Bearer <token>` para acessar qualquer endpoint de negócio. O token é mostrado somente na resposta de cadastro/login; o hash armazenado não é retornado. O logout revoga apenas o token usado naquela requisição. Login é limitado a 5 tentativas por minuto por combinação de e-mail e IP (e 20 por minuto por IP); cadastro é limitado a 10 por minuto por IP.
@@ -70,7 +74,7 @@ Cada usuário pertence a uma única organização. Produtos, fornecedores, setor
 
 ### Papéis e permissões
 
-O cadastro público cria o primeiro usuário da organização como `admin`. Os papéis `admin` e `operator` não podem ser definidos por payload: `role` é rejeitado no cadastro, e não há endpoints de gestão de usuários nesta etapa.
+O cadastro público cria o primeiro usuário da organização como `admin`. Os papéis `admin` e `operator` não podem ser definidos por payload: `role` é rejeitado no cadastro. Há fluxo de convites para operadores, mas ainda não existem endpoints para listar, alterar ou remover membros.
 
 | Recurso/operação | `admin` | `operator` |
 | --- | --- | --- |

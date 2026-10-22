@@ -27,7 +27,9 @@ class StoreProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:150'],
             'sku' => ['required', 'string', 'max:64', Rule::unique('products', 'sku')->where('organization_id', $this->user()->organization_id)],
             'minimum_stock' => ['sometimes', 'integer', 'min:0'],
+            /** @ignoreParam */
             'current_stock' => ['prohibited'],
+            /** @ignoreParam */
             'organization_id' => ['prohibited'],
         ];
     }

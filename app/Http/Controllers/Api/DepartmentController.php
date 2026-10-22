@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDepartmentRequest;
 use App\Http\Resources\DepartmentResource;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -34,6 +36,8 @@ class DepartmentController extends Controller
     /**
      * Display the specified resource.
      */
+    #[PathParameter('department', type: 'int')]
+    #[Response(status: 404, description: 'Department not found in the authenticated organization.')]
     public function show(Request $request, string $department): DepartmentResource
     {
         return new DepartmentResource($request->user()->organization->departments()->findOrFail($department));

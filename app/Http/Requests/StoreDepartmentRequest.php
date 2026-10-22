@@ -26,6 +26,7 @@ class StoreDepartmentRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'code' => ['required', 'string', 'max:32', Rule::unique('departments', 'code')->where('organization_id', $this->user()->organization_id)],
+            /** @ignoreParam */
             'organization_id' => ['prohibited'],
         ];
     }

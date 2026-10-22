@@ -28,6 +28,7 @@ class StoreSupplierRequest extends FormRequest
             'cnpj' => ['required', 'string', 'regex:/^(\d{14}|\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})$/', Rule::unique('suppliers', 'cnpj')->where('organization_id', $this->user()->organization_id)],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
+            /** @ignoreParam */
             'organization_id' => ['prohibited'],
         ];
     }

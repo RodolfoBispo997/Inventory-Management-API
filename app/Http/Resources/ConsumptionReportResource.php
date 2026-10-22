@@ -10,7 +10,25 @@ class ConsumptionReportResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @return array<string, mixed>
+     * @return array{
+     *     from: string,
+     *     to: string,
+     *     department_id: int|null,
+     *     departments: list<array{
+     *         id: int,
+     *         name: string,
+     *         code: string,
+     *         consumed_quantity: int,
+     *         movement_count: int,
+     *         products: list<array{
+     *             id: int,
+     *             name: string,
+     *             sku: string,
+     *             consumed_quantity: int,
+     *             movement_count: int
+     *         }>
+     *     }>
+     * }
      */
     public function toArray(Request $request): array
     {

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Resources\ProductResource;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -34,6 +36,8 @@ class ProductController extends Controller
     /**
      * Display the specified resource.
      */
+    #[PathParameter('product', type: 'int')]
+    #[Response(status: 404, description: 'Product not found in the authenticated organization.')]
     public function show(Request $request, string $product): ProductResource
     {
         return new ProductResource($request->user()->organization->products()->findOrFail($product));

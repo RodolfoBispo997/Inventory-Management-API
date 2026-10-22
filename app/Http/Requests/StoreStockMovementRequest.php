@@ -34,6 +34,7 @@ class StoreStockMovementRequest extends FormRequest
                 'integer',
                 Rule::exists('departments', 'id')->where('organization_id', $this->user()->organization_id),
             ],
+            /** @ignoreParam */
             'organization_id' => ['prohibited'],
         ];
     }

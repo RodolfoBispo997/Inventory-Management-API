@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Resources\SupplierResource;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -34,6 +36,8 @@ class SupplierController extends Controller
     /**
      * Display the specified resource.
      */
+    #[PathParameter('supplier', type: 'int')]
+    #[Response(status: 404, description: 'Supplier not found in the authenticated organization.')]
     public function show(Request $request, string $supplier): SupplierResource
     {
         return new SupplierResource($request->user()->organization->suppliers()->findOrFail($supplier));

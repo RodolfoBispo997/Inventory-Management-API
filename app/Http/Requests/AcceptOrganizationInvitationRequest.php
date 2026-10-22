@@ -25,7 +25,9 @@ class AcceptOrganizationInvitationRequest extends FormRequest
             'token' => ['required', 'string', 'regex:/\A[a-f0-9]{64}\z/'],
             'name' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:8', 'max:255'],
+            /** @ignoreParam */
             'role' => ['prohibited'],
+            /** @ignoreParam */
             'organization_id' => ['prohibited'],
         ];
     }

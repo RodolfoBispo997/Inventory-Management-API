@@ -24,7 +24,9 @@ class StoreOrganizationInvitationRequest extends FormRequest
     {
         return [
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
+            /** @ignoreParam */
             'role' => ['prohibited'],
+            /** @ignoreParam */
             'organization_id' => ['prohibited'],
         ];
     }
