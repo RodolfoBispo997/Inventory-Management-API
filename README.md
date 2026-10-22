@@ -6,15 +6,35 @@ API REST para cadastro de produtos, fornecedores, comparação de preços e cont
 
 - PHP 8.4+
 - Composer
-- Node.js e npm para compilar os assets padrão do Laravel
+- Node.js e npm para executar a aplicação Vue em `frontend/`
 
-Instale e prepare a aplicação com `composer run setup`. Inicie o ambiente local com `composer run dev` e rode os testes com `php artisan test --compact`.
+Instale e prepare a API com `composer run setup`. Inicie-a localmente com `composer run dev`. Os comandos Composer atuam na aplicação Laravel; o frontend Vue exige instalação e servidor separados, descritos abaixo.
 
 As respostas usam JSON. Listagens são paginadas com 15 registros por página e aceitam `?page=2`.
 
 ## Documentação OpenAPI local
 
 Com a aplicação em ambiente `local`, abra `http://localhost:8000/docs/api` para consultar a interface OpenAPI ou `http://localhost:8000/docs/api.json` para obter a especificação JSON. As rotas da documentação são bloqueadas fora do ambiente local por padrão. O documento cobre os endpoints públicos e protegidos, incluindo autenticação Bearer do Sanctum, regras de acesso por papel e paginação.
+
+## Executar o frontend Vue localmente
+
+Com a API Laravel em execução em `http://127.0.0.1:8000`, abra outro terminal e inicie o frontend:
+
+```sh
+cd frontend
+cp .env.example .env
+npm ci
+npm run dev
+```
+
+Abra `http://localhost:5173`. `VITE_API_BASE_URL` aponta para a API local por padrão, e `CORS_ALLOWED_ORIGINS` no `.env` da API permite essa origem. Para PowerShell, copie o exemplo apenas se ainda não houver configuração local:
+
+```powershell
+Set-Location frontend
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+npm ci
+npm run dev
+```
 
 ## Autenticação
 
@@ -99,11 +119,15 @@ Somente administradores podem criar e consultar convites da própria organizaç�
 
 Convites inválidos, expirados, usados ou cujo e-mail já foi cadastrado são rejeitados com `422`. O cadastro do operador e a marcação do convite como aceito ocorrem em uma única transação.
 
-As migrations de multitenancy criam uma organização legada chamada `Organização legada`, atribuem a ela os usuários e registros existentes e então tornam `organization_id` obrigatório. A migration não foi executada durante esta alteração. Planeje backup e janela de manutenção antes de aplicá-la em ambiente com dados, pois todo o conjunto legado será atribuído a essa organização. O rollback é interrompido se SKU, CNPJ ou código de setor, ou associações produto-fornecedor, se repetirem entre organizações.
+Em um banco vazio, as migrations criam as tabelas e não criam uma organização legada. Ao migrar um banco já usado pela versão anterior, a migration cria `Organização legada`, atribui a ela os usuários e todos os registros de negócio existentes e torna `organization_id` obrigatório; os dados são preservados, mas passam a pertencer a uma única organização. A suíte cobre o backfill com dados anteriores e o CI executa a migration e a suíte em SQLite e MySQL 8.4. Faça backup verificável e planeje janela de manutenção antes da atualização de produção.
+
+O rollback remove `organization_id` e a tabela de organizações. Isso elimina os vínculos e a separação entre organizações, mesmo quando não há valores duplicados. As verificações de duplicidade apenas evitam que a recriação de índices globais falhe; elas não tornam o rollback sem perda de informação. Não reverta essa migration em uma instalação multiorganização sem antes exportar e planejar a consolidação/restauração dos dados.
 
 ## Ambiente local com Docker
 
 O Compose inicia a aplicação PHP, MySQL 8.4, Redis 7 e Mailpit. As portas publicadas ficam em `localhost`: API `8000`, MySQL `3307`, Redis `6380`, SMTP `1025` e interface do Mailpit `8025`. O MySQL e Redis usam volumes nomeados para manter seus dados entre reinícios. As credenciais do Compose são apenas valores locais de exemplo; não as reutilize fora do desenvolvimento.
+
+O Dockerfile e o Compose atual são para desenvolvimento e CI, não para produção: o container PHP usa `artisan serve`, executa com configuração local/debug, instala dependências de desenvolvimento e o Compose monta o código-fonte e define credenciais de exemplo. Não exponha essa pilha na internet nem reutilize seus valores em produção. Produção requer runtime/web server PHP apropriado, imagem sem dependências de desenvolvimento, segredos fornecidos pelo ambiente e configuração de banco, cache, fila e TLS próprios.
 
 No PowerShell, copie o arquivo de ambiente de exemplo somente se ainda não houver um `.env` local:
 
@@ -112,6 +136,8 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 Defina `LOW_STOCK_ALERT_EMAIL` no `.env` para receber os alertas de estoque mínimo. O endereço é independente dos fornecedores; sem destinatário configurado, os alertas ficam desativados. O Compose usa Redis para a fila e inicia um worker dedicado. Os e-mails locais aparecem no Mailpit em `http://localhost:8025`.
+
+O `.env.example` usa `MAIL_MAILER=log`; fora do Compose, convites e alertas são gravados no log Laravel e não são entregues a uma caixa de entrada. Para testar entrega local pelo Docker, use o Mailpit acima. Em produção, configure `MAIL_MAILER`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS` e `MAIL_FROM_NAME` para o provedor escolhido. Forneça credenciais por um gerenciador de segredos ou variáveis protegidas, nunca em arquivos versionados. Configure também `FRONTEND_URL` com a URL pública do frontend e `CORS_ALLOWED_ORIGINS` com a origem exata do frontend (esquema, domínio e porta, sem caminho ou barra final); várias origens podem ser separadas por vírgulas.
 
 No Bash, use `cp -n .env.example .env`. Depois construa a imagem, gere a chave local, inicie os serviços e execute as migrations:
 
@@ -127,6 +153,14 @@ A API ficará em `http://localhost:8000` e o Mailpit em `http://localhost:8025`.
 Para executar testes dentro do container usando SQLite em memória (como no PHPUnit), rode `docker compose exec -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: app php artisan test --compact`. Para formatar PHP no container, rode `docker compose exec app vendor/bin/pint --format agent`.
 
 O setup atual do Laragon continua disponível por `composer run setup`, `composer run dev` e `php artisan test --compact` sem Docker.
+
+### Configuração de produção
+
+Não use os valores de desenvolvimento do `.env.example` em produção. Configure pelo ambiente, no mínimo, `APP_ENV=production`, `APP_DEBUG=false`, uma `APP_KEY` gerada e protegida, `APP_URL`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, conexão e credenciais do banco, cache/fila e mailer SMTP do provedor. Depois de fornecer as variáveis, execute `php artisan config:cache`. Antes de `php artisan migrate --force`, faça backup e confirme o plano de backfill acima. Não execute `composer run setup` como rotina de deploy: ele é um atalho local e instala/builda dependências de desenvolvimento.
+
+### Arquitetura AWS de referência
+
+A [proposta de arquitetura AWS](docs/architecture/aws-reference.md) descreve uma opção para frontend Vue estático, API Laravel em Docker, MySQL e e-mail de convites. É somente uma referência: **nenhum recurso foi provisionado e não houve deploy**.
 
 ## Integração contínua
 
